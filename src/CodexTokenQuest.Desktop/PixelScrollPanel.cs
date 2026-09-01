@@ -2,9 +2,9 @@ namespace CodexTokenQuest.Desktop;
 
 internal sealed class PixelScrollPanel : Panel
 {
-    private const int CardGap = 8;
-    private const int ScrollbarWidth = 11;
-    private const int WheelStep = 42;
+    private static int CardGap => HudScale.Px(8);
+    private static int ScrollbarWidth => HudScale.Px(11);
+    private static int WheelStep => HudScale.Px(42);
 
     private int _contentHeight;
     private int _scrollOffset;
@@ -58,7 +58,7 @@ internal sealed class PixelScrollPanel : Panel
                 ? 0
                 : Controls.Cast<Control>().Sum(control => control.Height) + CardGap * (Controls.Count - 1);
             _scrollOffset = Math.Clamp(_scrollOffset, 0, MaximumOffset);
-            var cardWidth = Math.Max(1, ClientSize.Width - (NeedsScrollbar ? ScrollbarWidth + 6 : 0));
+            var cardWidth = Math.Max(1, ClientSize.Width - (NeedsScrollbar ? ScrollbarWidth + HudScale.Px(6) : 0));
             var y = -_scrollOffset;
             foreach (Control control in Controls)
             {
@@ -138,25 +138,25 @@ internal sealed class PixelScrollPanel : Panel
         graphics.DrawRectangle(trackPen, ScrollbarTrack.X, ScrollbarTrack.Y, ScrollbarTrack.Width - 1, ScrollbarTrack.Height - 1);
         graphics.FillRectangle(thumbBrush, ScrollbarThumb);
         var shine = ScrollbarThumb;
-        shine.Inflate(-2, -2);
+        shine.Inflate(-HudScale.Px(2), -HudScale.Px(2));
         if (shine.Width > 0 && shine.Height > 0)
         {
-            graphics.FillRectangle(shineBrush, shine.X, shine.Y, 2, Math.Min(4, shine.Height));
+            graphics.FillRectangle(shineBrush, shine.X, shine.Y, HudScale.Px(2), Math.Min(HudScale.Px(4), shine.Height));
         }
     }
 
-    private Rectangle ScrollbarTrack => new(ClientSize.Width - ScrollbarWidth, 1, ScrollbarWidth - 2, Math.Max(1, ClientSize.Height - 2));
+    private Rectangle ScrollbarTrack => new(ClientSize.Width - ScrollbarWidth, HudScale.Px(1), ScrollbarWidth - HudScale.Px(2), Math.Max(1, ClientSize.Height - HudScale.Px(2)));
 
     private Rectangle ScrollbarThumb
     {
         get
         {
             var track = ScrollbarTrack;
-            var height = Math.Max(18, (int)Math.Round(track.Height * (double)ClientSize.Height / Math.Max(ClientSize.Height, _contentHeight)));
+            var height = Math.Max(HudScale.Px(18), (int)Math.Round(track.Height * (double)ClientSize.Height / Math.Max(ClientSize.Height, _contentHeight)));
             height = Math.Min(track.Height, height);
             var travel = Math.Max(0, track.Height - height);
             var y = MaximumOffset == 0 ? track.Y : track.Y + (int)Math.Round(travel * (double)_scrollOffset / MaximumOffset);
-            return new Rectangle(track.X + 2, y, Math.Max(3, track.Width - 4), height);
+            return new Rectangle(track.X + HudScale.Px(2), y, Math.Max(HudScale.Px(3), track.Width - HudScale.Px(4)), height);
         }
     }
 

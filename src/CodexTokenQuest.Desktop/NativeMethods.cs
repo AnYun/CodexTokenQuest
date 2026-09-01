@@ -78,10 +78,17 @@ internal static class NativeMethods
                 var isCodexWindow = title.ToString().Contains("Codex", StringComparison.OrdinalIgnoreCase) &&
                                     processName.Contains("Codex", StringComparison.OrdinalIgnoreCase);
                 var isCodexHost = isCodexProcess || isPackagedCodex || isCodexDesktopHost || isCodexWindow;
-                var requiresModeCheck = processName.Equals("ChatGPT", StringComparison.OrdinalIgnoreCase);
+                // The packaged Windows host now exposes a generic ChatGPT mode label even while
+                // displaying Codex. Its package identity is the stable signal for this companion.
+                var requiresModeCheck = processName.Equals("ChatGPT", StringComparison.OrdinalIgnoreCase) &&
+                                        !isPackagedCodex &&
+                                        !isCodexDesktopHost;
+                var modeAllowsHud = !requiresModeCheck ||
+                                    !TryGetCodexDesktopMode(window, out var isCodexMode) ||
+                                    isCodexMode;
                 if (isCodexHost &&
                     IsForegroundForHost(window) &&
-                    (!requiresModeCheck || IsCodexDesktopMode(window)))
+                    modeAllowsHud)
                 {
                     result = window;
                     return false;
@@ -104,8 +111,7 @@ internal static class NativeMethods
                     if (process.MainWindowHandle != 0 &&
                         !IsIconic(process.MainWindowHandle) &&
                         IsWindowVisible(process.MainWindowHandle) &&
-                        IsForegroundForHost(process.MainWindowHandle) &&
-                        IsCodexDesktopMode(process.MainWindowHandle))
+                        IsForegroundForHost(process.MainWindowHandle))
                     {
                         result = process.MainWindowHandle;
                         break;
@@ -130,13 +136,15 @@ internal static class NativeMethods
         return foregroundProcessId == hostProcessId || foregroundProcessId == Environment.ProcessId;
     }
 
-    internal static bool IsCodexDesktopMode(nint hostWindow)
+    private static bool TryGetCodexDesktopMode(nint hostWindow, out bool isCodexMode)
     {
+        isCodexMode = false;
         try
         {
             if (_modeButtonHost == hostWindow && _modeButton is not null && TryReadMode(_modeButton, out var cachedMode))
             {
-                return cachedMode;
+                isCodexMode = cachedMode;
+                return true;
             }
 
             _modeButton = null;
@@ -153,14 +161,15 @@ internal static class NativeMethods
             for (var index = 0; index < buttons.Count; index++)
             {
                 var button = buttons[index];
-                if (!TryIdentifyModeButton(button, root, out var isCodexMode))
+                if (!TryIdentifyModeButton(button, root, out var detectedMode))
                 {
                     continue;
                 }
 
                 _modeButton = button;
                 _modeButtonHost = hostWindow;
-                return isCodexMode;
+                isCodexMode = detectedMode;
+                return true;
             }
         }
         catch (ElementNotAvailableException)

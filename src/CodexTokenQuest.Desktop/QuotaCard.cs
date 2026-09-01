@@ -12,8 +12,8 @@ internal sealed class QuotaCard : Control
         _bucket = bucket;
         DoubleBuffered = true;
         BackColor = HudColors.Panel;
-        Margin = new Padding(0, 0, 0, 8);
-        Size = new Size(348, 70);
+        Margin = new Padding(0, 0, 0, HudScale.Px(8));
+        Size = new Size(HudScale.Px(348), HudScale.Px(70));
         UpdateCountdown(DateTimeOffset.Now);
     }
 
@@ -38,17 +38,24 @@ internal sealed class QuotaCard : Control
     {
         base.OnPaint(eventArgs);
         var graphics = eventArgs.Graphics;
+        var state = graphics.Save();
+        graphics.ScaleTransform((float)HudScale.Factor, (float)HudScale.Factor);
+        var width = HudScale.Logical(Width);
+        var height = HudScale.Logical(Height);
         graphics.SmoothingMode = SmoothingMode.None;
         var remaining = _bucket.RemainingPercent;
         var accent = remaining switch { <= 10m => HudColors.Red, <= 30m => HudColors.Amber, _ => HudColors.Green };
-        PixelArt.DrawPanel(graphics, ClientRectangle, accent);
-        using var titleFont = new Font("Consolas", 7f, FontStyle.Bold);
-        using var valueFont = new Font("Consolas", 8.5f, FontStyle.Bold);
+        PixelArt.DrawPanel(graphics, new Rectangle(0, 0, width, height), accent);
+        using var titleFont = PixelArt.CreateFont(7f);
+        using var valueFont = PixelArt.CreateFont(8.5f);
         var name = $"{(_bucket.Name ?? _bucket.Id).ToUpperInvariant()} [{_bucket.Window}]";
-        TextRenderer.DrawText(graphics, name, titleFont, new Rectangle(11, 8, 220, 14), HudColors.Cream, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
-        TextRenderer.DrawText(graphics, $"{HudCopy.Stamina} {remaining:0.#}", valueFont, new Rectangle(220, 7, 115, 16), accent, TextFormatFlags.Right | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
-        PixelArt.DrawBar(graphics, new Rectangle(11, 28, Width - 22, 9), remaining, accent);
-        TextRenderer.DrawText(graphics, _countdown, titleFont, new Rectangle(11, 45, Width - 22, 14), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding);
+        var valueWidth = Math.Min(115, Math.Max(72, width / 3));
+        var valueLeft = Math.Max(11, width - valueWidth - 11);
+        PixelArt.DrawText(graphics, name, titleFont, new Rectangle(11, 8, Math.Max(1, valueLeft - 15), 14), HudColors.Cream, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+        PixelArt.DrawText(graphics, $"{HudCopy.Stamina} {remaining:0.#}", valueFont, new Rectangle(valueLeft, 7, valueWidth, 16), accent, TextFormatFlags.Right | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+        PixelArt.DrawBar(graphics, new Rectangle(11, 28, width - 22, 9), remaining, accent);
+        PixelArt.DrawText(graphics, _countdown, titleFont, new Rectangle(11, 45, width - 22, 14), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding);
+        graphics.Restore(state);
     }
 
     internal static string FormatDuration(TimeSpan duration) => duration.TotalDays >= 1

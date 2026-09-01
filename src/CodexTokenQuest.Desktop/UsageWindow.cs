@@ -40,19 +40,21 @@ internal sealed class UsageWindow : Form
     internal UsageWindow()
     {
         _settings = DesktopSettings.Load();
+        HudScale.Set(_settings.HudScalePercent);
         HudColors.SetTheme((HudTheme)_settings.ThemeIndex);
         Text = "Codex Token Quest";
-        ClientSize = PanelSizes[_settings.SelectedPanel];
+        AutoScaleMode = AutoScaleMode.None;
+        ClientSize = GetPanelSize(_settings.SelectedPanel);
         BackColor = HudColors.Background;
         ForeColor = HudColors.Text;
-        Font = new Font("Consolas", 8f, FontStyle.Bold);
+        Font = PixelArt.CreateHudFont(8f);
         FormBorderStyle = FormBorderStyle.None;
         MaximizeBox = MinimizeBox = ShowIcon = ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
         TopMost = DoubleBuffered = true;
 
-        _brand = new Label { Text = "◆ CODEX TOKEN QUEST ◆", Font = new Font("Consolas", 9f, FontStyle.Bold), Location = new(12, 10), Size = new(210, 17) };
-        _status = new Label { Text = "LOADING SAVE DATA...", Font = new Font("Consolas", 6.5f, FontStyle.Bold), Location = new(14, 29), Size = new(215, 14) };
+        _brand = new Label { Text = "◆ CODEX TOKEN QUEST ◆", Font = PixelArt.CreateHudFont(9f), Location = new(12, 10), Size = new(210, 17) };
+        _status = new Label { Text = "LOADING SAVE DATA...", Font = PixelArt.CreateHudFont(6.5f), Location = new(14, 29), Size = new(215, 14) };
         _theme = CreateButton("A PIX", 249, 9, 61, 25);
         _refresh = CreateButton("↻", 315, 9, 28, 25);
         _close = CreateButton("×", 348, 9, 31, 25);
@@ -71,16 +73,16 @@ internal sealed class UsageWindow : Form
         _stats = new RpgStatsPanel { Location = new(170, 0), Size = new(198, 174) };
         _compactReset = new Label
         {
-            Text = "◆ NEXT RESET // UNKNOWN", Font = new Font("Consolas", 7f, FontStyle.Bold),
+            Text = "◆ NEXT RESET // UNKNOWN", Font = PixelArt.CreateHudFont(7f),
             BorderStyle = BorderStyle.FixedSingle, TextAlign = ContentAlignment.MiddleLeft,
-            Location = new(3, 180), Padding = new(7, 0, 0, 0), Size = new(364, 24)
+            Location = new(3, 180), Padding = new(HudScale.Px(7), 0, 0, 0), Size = new(364, 24)
         };
         _campPanel = new Panel { Location = new(11, 88), Size = new(370, 206) };
         _campPanel.Controls.AddRange([_hero, _stats, _compactReset]);
 
         _questTitle = new Label
         {
-            Text = "⚔ STAMINA DUNGEON // WEEKLY LIMITS", Font = new Font("Consolas", 7f, FontStyle.Bold),
+            Text = "⚔ STAMINA DUNGEON // WEEKLY LIMITS", Font = PixelArt.CreateHudFont(7f),
             Location = new(3, 0), Size = new(360, 16)
         };
         _quotaCards = new PixelScrollPanel { Location = new(3, 22), Size = new(365, 374) };
@@ -95,11 +97,13 @@ internal sealed class UsageWindow : Form
         _footer = new Label
         {
             Text = "AUTO-SAVE ◆ SYNC 5M ◆ OPTIONS", Cursor = Cursors.Hand,
-            Font = new Font("Consolas", 6.7f, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft,
+            Font = PixelArt.CreateHudFont(6.7f), TextAlign = ContentAlignment.MiddleLeft,
             Location = new(14, ClientSize.Height - 28), Size = new(ClientSize.Width - 28, 16)
         };
         _footer.Click += (_, _) => ShowSettings();
         Controls.AddRange([_brand, _status, _theme, _refresh, _close, _campTab, _questsTab, _historyTab, _campPanel, _questsPanel, _historyPanel, _footer]);
+        Resize += (_, _) => LayoutResponsiveControls();
+        LayoutResponsiveControls();
 
         var trayMenu = new ContextMenuStrip();
         trayMenu.Items.Add("顯示 / 隱藏", null, (_, _) => ToggleVisibility());
@@ -130,10 +134,10 @@ internal sealed class UsageWindow : Form
     {
         var button = new Button
         {
-            Text = text, Font = new Font("Consolas", 7f, FontStyle.Bold), FlatStyle = FlatStyle.Flat,
+            Text = text, Font = PixelArt.CreateHudFont(7f), FlatStyle = FlatStyle.Flat,
             TabStop = false, Location = new(x, y), Size = new(width, height), Cursor = Cursors.Hand
         };
-        button.FlatAppearance.BorderSize = 2;
+        button.FlatAppearance.BorderSize = HudScale.Px(2);
         return button;
     }
 
@@ -151,13 +155,102 @@ internal sealed class UsageWindow : Form
         _campPanel.Visible = _settings.SelectedPanel == "CAMP";
         _questsPanel.Visible = _settings.SelectedPanel == "QUESTS";
         _historyPanel.Visible = _settings.SelectedPanel == "HISTORY";
-        ClientSize = PanelSizes[_settings.SelectedPanel];
-        _footer.Location = new(14, ClientSize.Height - 28);
-        _footer.Size = new(ClientSize.Width - 28, 16);
+        ClientSize = GetPanelSize(_settings.SelectedPanel);
+        LayoutResponsiveControls();
         StyleNavigation();
         ResumeLayout(true);
         TrackHostWindow();
         Invalidate();
+    }
+
+    private void LayoutResponsiveControls()
+    {
+        if (_footer is null)
+        {
+            return;
+        }
+
+        var outerMargin = HudScale.Px(11);
+        var contentTop = HudScale.Px(88);
+        var footerHeight = HudScale.Px(16);
+        var footerBottom = HudScale.Px(12);
+        var contentFooterGap = HudScale.Px(8);
+
+        var clientWidth = Math.Max(1, ClientSize.Width);
+        var clientHeight = Math.Max(1, ClientSize.Height);
+
+        // Keep window actions attached to the right edge and let the title use
+        // whatever space remains on narrow Codex windows.
+        _close.SetBounds(clientWidth - HudScale.Px(44), HudScale.Px(9), HudScale.Px(31), HudScale.Px(25));
+        _refresh.SetBounds(_close.Left - HudScale.Px(33), HudScale.Px(9), HudScale.Px(28), HudScale.Px(25));
+        _theme.SetBounds(_refresh.Left - HudScale.Px(66), HudScale.Px(9), HudScale.Px(61), HudScale.Px(25));
+        var headingWidth = Math.Max(HudScale.Px(70), _theme.Left - HudScale.Px(18));
+        _brand.SetBounds(HudScale.Px(12), HudScale.Px(10), headingWidth, HudScale.Px(17));
+        _status.SetBounds(HudScale.Px(14), HudScale.Px(29), headingWidth, HudScale.Px(14));
+        _brand.Visible = clientWidth >= HudScale.Px(260);
+        _status.Visible = clientWidth >= HudScale.Px(260);
+
+        // Divide the navigation row evenly instead of retaining the original
+        // fixed 116/116/128 pixel widths.
+        var tabsWidth = Math.Max(3, clientWidth - outerMargin * 2);
+        var firstTabWidth = tabsWidth / 3;
+        var secondTabWidth = tabsWidth / 3;
+        _campTab.SetBounds(outerMargin, HudScale.Px(51), firstTabWidth, HudScale.Px(29));
+        _questsTab.SetBounds(_campTab.Right, HudScale.Px(51), secondTabWidth, HudScale.Px(29));
+        _historyTab.SetBounds(_questsTab.Right, HudScale.Px(51), tabsWidth - firstTabWidth - secondTabWidth, HudScale.Px(29));
+
+        var footerTop = Math.Max(contentTop + 1, clientHeight - footerBottom - footerHeight);
+        _footer.SetBounds(HudScale.Px(14), footerTop, Math.Max(1, clientWidth - HudScale.Px(28)), footerHeight);
+        var contentWidth = Math.Max(1, clientWidth - outerMargin * 2);
+        var contentHeight = Math.Max(1, footerTop - contentFooterGap - contentTop);
+        _campPanel.SetBounds(outerMargin, contentTop, contentWidth, contentHeight);
+        _questsPanel.SetBounds(outerMargin, contentTop, contentWidth, contentHeight);
+        _historyPanel.SetBounds(outerMargin, contentTop, contentWidth, contentHeight);
+
+        var innerWidth = Math.Max(1, contentWidth - HudScale.Px(6));
+        var resetHeight = Math.Min(HudScale.Px(24), Math.Max(1, contentHeight));
+        var resetTop = Math.Max(0, contentHeight - resetHeight);
+        var heroHeight = Math.Max(1, resetTop - HudScale.Px(6));
+        var heroWidth = Math.Max(1, (innerWidth - HudScale.Px(6)) * 45 / 100);
+        _hero.SetBounds(HudScale.Px(3), 0, heroWidth, heroHeight);
+        _stats.SetBounds(_hero.Right + HudScale.Px(6), 0, Math.Max(1, innerWidth - heroWidth - HudScale.Px(6)), heroHeight);
+        _compactReset.SetBounds(HudScale.Px(3), resetTop, innerWidth, resetHeight);
+
+        _questTitle.SetBounds(HudScale.Px(3), 0, innerWidth, HudScale.Px(16));
+        _quotaCards.SetBounds(HudScale.Px(3), HudScale.Px(22), innerWidth, Math.Max(1, contentHeight - HudScale.Px(22)));
+        _dailyChart.SetBounds(HudScale.Px(3), 0, innerWidth, contentHeight);
+    }
+
+    private Size GetPanelSize(string panel)
+    {
+        var baseSize = PanelSizes[panel];
+        var scale = _settings.HudScalePercent / 100d;
+        return new Size(
+            (int)Math.Round(baseSize.Width * scale),
+            (int)Math.Round(baseSize.Height * scale));
+    }
+
+    private void ApplyHudScale()
+    {
+        Font = PixelArt.CreateHudFont(8f);
+        _brand.Font = PixelArt.CreateHudFont(9f);
+        _status.Font = PixelArt.CreateHudFont(6.5f);
+        _compactReset.Font = PixelArt.CreateHudFont(7f);
+        _compactReset.Padding = new Padding(HudScale.Px(7), 0, 0, 0);
+        _questTitle.Font = PixelArt.CreateHudFont(7f);
+        _footer.Font = PixelArt.CreateHudFont(6.7f);
+        foreach (var button in new[] { _campTab, _questsTab, _historyTab, _theme, _refresh, _close })
+        {
+            button.Font = PixelArt.CreateHudFont(7f);
+            button.FlatAppearance.BorderSize = HudScale.Px(2);
+        }
+        foreach (var card in _quotaCards.Controls.OfType<QuotaCard>())
+        {
+            card.Height = HudScale.Px(70);
+            card.Margin = new Padding(0, 0, 0, HudScale.Px(8));
+        }
+        _quotaCards.PerformLayout();
+        Invalidate(true);
     }
 
     private void CycleTheme()
@@ -350,11 +443,22 @@ internal sealed class UsageWindow : Form
 
     private void ShowSettings()
     {
-        using var form = new SettingsForm(_settings.RefreshMinutes);
+        using var form = new SettingsForm(_settings.RefreshMinutes, _settings.HudScalePercent);
         if (form.ShowDialog(this) != DialogResult.OK) return;
-        _settings = _settings with { RefreshMinutes = form.RefreshMinutes };
+        var sizeChanged = _settings.HudScalePercent != form.HudScalePercent;
+        _settings = _settings with
+        {
+            RefreshMinutes = form.RefreshMinutes,
+            HudScalePercent = form.HudScalePercent
+        };
         _settings.Save();
         ApplyRefreshInterval();
+        if (sizeChanged)
+        {
+            HudScale.Set(_settings.HudScalePercent);
+            ApplyHudScale();
+            ApplyPanel();
+        }
     }
 
     private void TrackHostWindow()
@@ -369,10 +473,10 @@ internal sealed class UsageWindow : Form
             return;
         }
         _codexMissingSince = null;
-        var target = PanelSizes[_settings.SelectedPanel];
-        const int margin = 12;
-        var width = Math.Min(target.Width, Math.Max(280, host.Right - host.Left - margin * 2));
-        var height = Math.Min(target.Height, Math.Max(210, host.Bottom - host.Top - margin * 2));
+        var target = GetPanelSize(_settings.SelectedPanel);
+        var margin = HudScale.Px(12);
+        var width = Math.Min(target.Width, Math.Max(HudScale.Px(280), host.Right - host.Left - margin * 2));
+        var height = Math.Min(target.Height, Math.Max(HudScale.Px(210), host.Bottom - host.Top - margin * 2));
         if (Size != new Size(width, height)) Size = new(width, height);
         Location = new(host.Right - Width - margin, host.Bottom - Height - margin);
         if (!Visible && !_manuallyHidden) Show();
@@ -395,10 +499,15 @@ internal sealed class UsageWindow : Form
     protected override void OnPaint(PaintEventArgs eventArgs)
     {
         base.OnPaint(eventArgs);
-        PixelArt.DrawPanel(eventArgs.Graphics, ClientRectangle, HudColors.Gold);
+        var state = eventArgs.Graphics.Save();
+        eventArgs.Graphics.ScaleTransform((float)HudScale.Factor, (float)HudScale.Factor);
+        var width = HudScale.Logical(ClientSize.Width);
+        var height = HudScale.Logical(ClientSize.Height);
+        PixelArt.DrawPanel(eventArgs.Graphics, new Rectangle(0, 0, width, height), HudColors.Gold);
         using var line = new Pen(HudColors.Grid);
-        eventArgs.Graphics.DrawLine(line, 9, 46, ClientSize.Width - 10, 46);
-        eventArgs.Graphics.DrawLine(line, 9, 84, ClientSize.Width - 10, 84);
+        eventArgs.Graphics.DrawLine(line, 9, 46, width - 10, 46);
+        eventArgs.Graphics.DrawLine(line, 9, 84, width - 10, 84);
+        eventArgs.Graphics.Restore(state);
     }
 
     protected override void OnFormClosing(FormClosingEventArgs eventArgs)

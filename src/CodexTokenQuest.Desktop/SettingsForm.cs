@@ -5,19 +5,25 @@ namespace CodexTokenQuest.Desktop;
 internal sealed class SettingsForm : Form
 {
     private readonly PixelNumberDisplay _minutesDisplay;
+    private readonly PixelScaleBar _scaleBar;
+    private readonly Label _scaleValue;
     private int _refreshMinutes;
+    private int _hudScalePercent;
 
     internal int RefreshMinutes => _refreshMinutes;
+    internal int HudScalePercent => _hudScalePercent;
 
-    internal SettingsForm(int currentMinutes)
+    internal SettingsForm(int currentMinutes, int currentHudScalePercent)
     {
         _refreshMinutes = Math.Clamp(currentMinutes, DesktopSettings.MinimumRefreshMinutes, DesktopSettings.MaximumRefreshMinutes);
+        _hudScalePercent = Math.Clamp(currentHudScalePercent, DesktopSettings.MinimumHudScalePercent, DesktopSettings.MaximumHudScalePercent);
 
         Text = "Codex Token Quest Options";
-        ClientSize = new Size(360, 270);
+        AutoScaleMode = AutoScaleMode.None;
+        ClientSize = new Size(HudScale.Px(360), HudScale.Px(360));
         BackColor = HudColors.Background;
         ForeColor = HudColors.Text;
-        Font = new Font("Consolas", 8f, FontStyle.Bold);
+        Font = PixelArt.CreateHudFont(8f);
         FormBorderStyle = FormBorderStyle.None;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -31,11 +37,11 @@ internal sealed class SettingsForm : Form
         var title = new Label
         {
             Text = "◆ GAME OPTIONS ◆",
-            Font = new Font("Consolas", 11f, FontStyle.Bold),
+            Font = PixelArt.CreateHudFont(11f),
             ForeColor = HudColors.Gold,
             BackColor = Color.Transparent,
-            Location = new Point(18, 15),
-            Size = new Size(260, 22)
+            Location = new Point(HudScale.Px(18), HudScale.Px(15)),
+            Size = new Size(HudScale.Px(260), HudScale.Px(22))
         };
         var close = CreatePixelButton("×", HudColors.Red, 316, 11, 28, 27);
         close.DialogResult = DialogResult.Cancel;
@@ -43,27 +49,27 @@ internal sealed class SettingsForm : Form
         var section = new Label
         {
             Text = "AUTO-SAVE INTERVAL",
-            Font = new Font("Consolas", 8.5f, FontStyle.Bold),
+            Font = PixelArt.CreateHudFont(8.5f),
             ForeColor = HudColors.Cyan,
             BackColor = Color.Transparent,
-            Location = new Point(20, 55),
-            Size = new Size(200, 18)
+            Location = new Point(HudScale.Px(20), HudScale.Px(55)),
+            Size = new Size(HudScale.Px(200), HudScale.Px(18))
         };
         var description = new Label
         {
             Text = "多久重新讀取一次 Codex 用量（1–1440 分鐘）",
             ForeColor = HudColors.Muted,
             BackColor = Color.Transparent,
-            Location = new Point(20, 74),
-            Size = new Size(320, 17)
+            Location = new Point(HudScale.Px(20), HudScale.Px(74)),
+            Size = new Size(HudScale.Px(320), HudScale.Px(17))
         };
 
         var minusFive = CreatePixelButton("-5", HudColors.Amber, 17, 99, 42, 37);
         var minusOne = CreatePixelButton("-1", HudColors.Cyan, 63, 99, 42, 37);
         _minutesDisplay = new PixelNumberDisplay
         {
-            Location = new Point(109, 99),
-            Size = new Size(136, 37),
+            Location = new Point(HudScale.Px(109), HudScale.Px(99)),
+            Size = new Size(HudScale.Px(136), HudScale.Px(37)),
             Minutes = _refreshMinutes
         };
         var plusOne = CreatePixelButton("+1", HudColors.Cyan, 249, 99, 42, 37);
@@ -78,8 +84,8 @@ internal sealed class SettingsForm : Form
             Text = "QUICK SLOTS",
             ForeColor = HudColors.Muted,
             BackColor = Color.Transparent,
-            Location = new Point(20, 148),
-            Size = new Size(120, 15)
+            Location = new Point(HudScale.Px(20), HudScale.Px(148)),
+            Size = new Size(HudScale.Px(120), HudScale.Px(15))
         };
         var quickValues = new[] { 1, 5, 15, 60 };
         for (var index = 0; index < quickValues.Length; index++)
@@ -90,14 +96,50 @@ internal sealed class SettingsForm : Form
             Controls.Add(quick);
         }
 
-        var cancel = CreatePixelButton("CANCEL", HudColors.Red, 176, 218, 78, 34);
+        var sizeSection = new Label
+        {
+            Text = "HUD SIZE",
+            Font = PixelArt.CreateHudFont(8.5f),
+            ForeColor = HudColors.Cyan,
+            BackColor = Color.Transparent,
+            Location = new Point(HudScale.Px(20), HudScale.Px(219)),
+            Size = new Size(HudScale.Px(120), HudScale.Px(18))
+        };
+        var sizeDescription = new Label
+        {
+            Text = "拖曳調整介面大小（50%–300%）",
+            ForeColor = HudColors.Muted,
+            BackColor = Color.Transparent,
+            Location = new Point(HudScale.Px(20), HudScale.Px(238)),
+            Size = new Size(HudScale.Px(320), HudScale.Px(17))
+        };
+        _scaleBar = new PixelScaleBar
+        {
+            Location = new Point(HudScale.Px(20), HudScale.Px(262)),
+            Size = new Size(HudScale.Px(242), HudScale.Px(31)),
+            Value = _hudScalePercent
+        };
+        _scaleValue = new Label
+        {
+            Text = $"{_hudScalePercent}%",
+            Font = PixelArt.CreateHudFont(8f),
+            ForeColor = HudColors.Gold,
+            BackColor = HudColors.Panel,
+            BorderStyle = BorderStyle.FixedSingle,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Location = new Point(HudScale.Px(270), HudScale.Px(262)),
+            Size = new Size(HudScale.Px(70), HudScale.Px(31))
+        };
+        _scaleBar.ValueChanged += (_, _) => SetHudScale(_scaleBar.Value);
+
+        var cancel = CreatePixelButton("CANCEL", HudColors.Red, 176, 316, 78, 28);
         cancel.DialogResult = DialogResult.Cancel;
-        var save = CreatePixelButton("SAVE", HudColors.Green, 264, 218, 78, 34);
+        var save = CreatePixelButton("SAVE", HudColors.Green, 264, 316, 78, 28);
         save.DialogResult = DialogResult.OK;
 
         AcceptButton = save;
         CancelButton = cancel;
-        Controls.AddRange([title, close, section, description, minusFive, minusOne, _minutesDisplay, plusOne, plusFive, quickLabel, cancel, save]);
+        Controls.AddRange([title, close, section, description, minusFive, minusOne, _minutesDisplay, plusOne, plusFive, quickLabel, sizeSection, sizeDescription, _scaleBar, _scaleValue, cancel, save]);
 
         Shown += (_, _) =>
         {
@@ -109,11 +151,17 @@ internal sealed class SettingsForm : Form
     protected override void OnPaint(PaintEventArgs eventArgs)
     {
         base.OnPaint(eventArgs);
+        var state = eventArgs.Graphics.Save();
+        eventArgs.Graphics.ScaleTransform((float)HudScale.Factor, (float)HudScale.Factor);
+        var width = HudScale.Logical(ClientSize.Width);
+        var height = HudScale.Logical(ClientSize.Height);
         eventArgs.Graphics.SmoothingMode = SmoothingMode.None;
-        PixelArt.DrawPanel(eventArgs.Graphics, ClientRectangle, HudColors.Gold);
+        PixelArt.DrawPanel(eventArgs.Graphics, new Rectangle(0, 0, width, height), HudColors.Gold);
         using var divider = new Pen(HudColors.Grid, 2f);
-        eventArgs.Graphics.DrawLine(divider, 18, 45, ClientSize.Width - 18, 45);
-        eventArgs.Graphics.DrawLine(divider, 18, 207, ClientSize.Width - 18, 207);
+        eventArgs.Graphics.DrawLine(divider, 18, 45, width - 18, 45);
+        eventArgs.Graphics.DrawLine(divider, 18, 207, width - 18, 207);
+        eventArgs.Graphics.DrawLine(divider, 18, 306, width - 18, 306);
+        eventArgs.Graphics.Restore(state);
     }
 
     protected override void OnKeyDown(KeyEventArgs eventArgs)
@@ -139,25 +187,124 @@ internal sealed class SettingsForm : Form
         _minutesDisplay.Minutes = _refreshMinutes;
     }
 
+    private void SetHudScale(int percent)
+    {
+        _hudScalePercent = Math.Clamp(percent, DesktopSettings.MinimumHudScalePercent, DesktopSettings.MaximumHudScalePercent);
+        _scaleValue.Text = $"{_hudScalePercent}%";
+    }
+
     private static Button CreatePixelButton(string text, Color accent, int x, int y, int width, int height)
     {
         var button = new Button
         {
             Text = text,
-            Font = new Font("Consolas", 8f, FontStyle.Bold),
+            Font = PixelArt.CreateHudFont(8f),
             ForeColor = accent,
             BackColor = HudColors.Panel,
             FlatStyle = FlatStyle.Flat,
-            Location = new Point(x, y),
-            Size = new Size(width, height),
+            Location = new Point(HudScale.Px(x), HudScale.Px(y)),
+            Size = new Size(HudScale.Px(width), HudScale.Px(height)),
             Cursor = Cursors.Hand,
             TabStop = true
         };
         button.FlatAppearance.BorderColor = accent;
-        button.FlatAppearance.BorderSize = 2;
+        button.FlatAppearance.BorderSize = HudScale.Px(2);
         button.FlatAppearance.MouseOverBackColor = HudColors.PanelBright;
         button.FlatAppearance.MouseDownBackColor = HudColors.Ink;
         return button;
+    }
+}
+
+internal sealed class PixelScaleBar : Control
+{
+    private int _value = DesktopSettings.DefaultHudScalePercent;
+    private bool _dragging;
+
+    internal event EventHandler? ValueChanged;
+
+    internal int Value
+    {
+        get => _value;
+        set
+        {
+            var next = Math.Clamp(value, DesktopSettings.MinimumHudScalePercent, DesktopSettings.MaximumHudScalePercent);
+            if (next == _value) return;
+            _value = next;
+            Invalidate();
+            ValueChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    internal PixelScaleBar()
+    {
+        DoubleBuffered = true;
+        BackColor = HudColors.Panel;
+        Cursor = Cursors.Hand;
+        TabStop = true;
+        SetStyle(ControlStyles.Selectable, true);
+    }
+
+    protected override void OnPaint(PaintEventArgs eventArgs)
+    {
+        base.OnPaint(eventArgs);
+        var state = eventArgs.Graphics.Save();
+        eventArgs.Graphics.ScaleTransform((float)HudScale.Factor, (float)HudScale.Factor);
+        var width = HudScale.Logical(Width);
+        var height = HudScale.Logical(Height);
+        PixelArt.DrawPanel(eventArgs.Graphics, new Rectangle(0, 0, width, height), Focused ? HudColors.Gold : HudColors.Cyan);
+        var track = new Rectangle(10, height / 2 - 5, Math.Max(1, width - 20), 10);
+        var progress = (_value - DesktopSettings.MinimumHudScalePercent) * 100m /
+                       (DesktopSettings.MaximumHudScalePercent - DesktopSettings.MinimumHudScalePercent);
+        PixelArt.DrawBar(eventArgs.Graphics, track, progress, HudColors.Cyan);
+        var thumbX = track.Left + (int)Math.Round((track.Width - 1) * progress / 100m);
+        using var thumb = new SolidBrush(HudColors.Gold);
+        eventArgs.Graphics.FillRectangle(thumb, thumbX - 3, track.Top - 4, 7, track.Height + 8);
+        eventArgs.Graphics.Restore(state);
+    }
+
+    protected override void OnMouseDown(MouseEventArgs eventArgs)
+    {
+        base.OnMouseDown(eventArgs);
+        if (eventArgs.Button != MouseButtons.Left) return;
+        Focus();
+        _dragging = true;
+        Capture = true;
+        SetValueFromX(HudScale.Logical(eventArgs.X));
+    }
+
+    protected override void OnMouseMove(MouseEventArgs eventArgs)
+    {
+        base.OnMouseMove(eventArgs);
+        if (_dragging) SetValueFromX(HudScale.Logical(eventArgs.X));
+    }
+
+    protected override void OnMouseUp(MouseEventArgs eventArgs)
+    {
+        base.OnMouseUp(eventArgs);
+        _dragging = false;
+        Capture = false;
+    }
+
+    protected override bool IsInputKey(Keys keyData) =>
+        keyData is Keys.Left or Keys.Right or Keys.Home or Keys.End || base.IsInputKey(keyData);
+
+    protected override void OnKeyDown(KeyEventArgs eventArgs)
+    {
+        if (eventArgs.KeyCode == Keys.Left) Value -= 5;
+        else if (eventArgs.KeyCode == Keys.Right) Value += 5;
+        else if (eventArgs.KeyCode == Keys.Home) Value = DesktopSettings.MinimumHudScalePercent;
+        else if (eventArgs.KeyCode == Keys.End) Value = DesktopSettings.MaximumHudScalePercent;
+        else { base.OnKeyDown(eventArgs); return; }
+        eventArgs.Handled = true;
+    }
+
+    private void SetValueFromX(int x)
+    {
+        var trackWidth = Math.Max(1, HudScale.Logical(Width) - 20);
+        var ratio = Math.Clamp((x - 10d) / trackWidth, 0d, 1d);
+        var raw = DesktopSettings.MinimumHudScalePercent +
+                  ratio * (DesktopSettings.MaximumHudScalePercent - DesktopSettings.MinimumHudScalePercent);
+        Value = (int)Math.Round(raw);
     }
 }
 
@@ -184,18 +331,23 @@ internal sealed class PixelNumberDisplay : Control
     protected override void OnPaint(PaintEventArgs eventArgs)
     {
         base.OnPaint(eventArgs);
+        var state = eventArgs.Graphics.Save();
+        eventArgs.Graphics.ScaleTransform((float)HudScale.Factor, (float)HudScale.Factor);
+        var width = HudScale.Logical(Width);
+        var height = HudScale.Logical(Height);
         eventArgs.Graphics.SmoothingMode = SmoothingMode.None;
         using var outer = new Pen(HudColors.Ink, 3f);
         using var border = new Pen(HudColors.Gold, 2f);
-        eventArgs.Graphics.DrawRectangle(outer, 1, 1, Width - 3, Height - 3);
-        eventArgs.Graphics.DrawRectangle(border, 3, 3, Width - 7, Height - 7);
-        using var valueFont = new Font("Consolas", 12f, FontStyle.Bold);
-        TextRenderer.DrawText(
+        eventArgs.Graphics.DrawRectangle(outer, 1, 1, width - 3, height - 3);
+        eventArgs.Graphics.DrawRectangle(border, 3, 3, width - 7, height - 7);
+        using var valueFont = PixelArt.CreateFont(12f);
+        PixelArt.DrawText(
             eventArgs.Graphics,
             $"{_minutes:0000} MIN",
             valueFont,
-            ClientRectangle,
+            new Rectangle(0, 0, width, height),
             HudColors.Cream,
             TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+        eventArgs.Graphics.Restore(state);
     }
 }

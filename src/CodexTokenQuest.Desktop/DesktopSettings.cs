@@ -7,8 +7,12 @@ internal sealed record DesktopSettings
     internal const int DefaultRefreshMinutes = 5;
     internal const int MinimumRefreshMinutes = 1;
     internal const int MaximumRefreshMinutes = 1440;
+    internal const int DefaultHudScalePercent = 100;
+    internal const int MinimumHudScalePercent = 50;
+    internal const int MaximumHudScalePercent = 300;
 
     public int RefreshMinutes { get; init; } = DefaultRefreshMinutes;
+    public int HudScalePercent { get; init; } = DefaultHudScalePercent;
     public bool CompactMode { get; init; } = true;
     public int CharacterIndex { get; init; }
     public int ThemeIndex { get; init; }
@@ -41,6 +45,7 @@ internal sealed record DesktopSettings
     internal DesktopSettings Normalize() => this with
     {
         RefreshMinutes = Math.Clamp(RefreshMinutes, MinimumRefreshMinutes, MaximumRefreshMinutes),
+        HudScalePercent = Math.Clamp(HudScalePercent, MinimumHudScalePercent, MaximumHudScalePercent),
         CharacterIndex = Math.Clamp(CharacterIndex, 0, RpgHeroPanel.Characters.Count - 1),
         ThemeIndex = Math.Clamp(ThemeIndex, 0, Enum.GetValues<HudTheme>().Length - 1),
         SelectedPanel = SelectedPanel is "CAMP" or "QUESTS" or "HISTORY" ? SelectedPanel : "CAMP"

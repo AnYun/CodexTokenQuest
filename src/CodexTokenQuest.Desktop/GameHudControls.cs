@@ -3,6 +3,21 @@ using System.Globalization;
 
 namespace CodexTokenQuest.Desktop;
 
+internal static class HudScale
+{
+    private static double _factor = 1d;
+
+    internal static double Factor => _factor;
+    internal static void Set(int percent) => _factor = Math.Clamp(percent, 50, 300) / 100d;
+    internal static int Px(int value)
+    {
+        if (value == 0) return 0;
+        var scaled = (int)Math.Round(value * _factor);
+        return value > 0 ? Math.Max(1, scaled) : Math.Min(-1, scaled);
+    }
+    internal static int Logical(int value) => Math.Max(1, (int)Math.Round(value / _factor));
+}
+
 internal enum HudTheme
 {
     PixelDungeon,
@@ -298,12 +313,16 @@ internal sealed class RpgHeroPanel : Control
     {
         base.OnPaint(eventArgs);
         var graphics = eventArgs.Graphics;
+        var state = graphics.Save();
+        graphics.ScaleTransform((float)HudScale.Factor, (float)HudScale.Factor);
+        var width = HudScale.Logical(Width);
+        var height = HudScale.Logical(Height);
         graphics.SmoothingMode = SmoothingMode.None;
         graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
         graphics.PixelOffsetMode = PixelOffsetMode.Half;
-        PixelArt.DrawPanel(graphics, ClientRectangle, HudColors.Gold);
+        PixelArt.DrawPanel(graphics, new Rectangle(0, 0, width, height), HudColors.Gold);
 
-        var heroArea = new Rectangle(7, 7, Width - 14, Math.Max(70, Height - 51));
+        var heroArea = new Rectangle(7, 7, width - 14, Math.Max(70, height - 51));
         var skyColor = HudColors.Theme switch
         {
             HudTheme.ArcaneGlass => Color.FromArgb(38, 29, 86),
@@ -345,12 +364,13 @@ internal sealed class RpgHeroPanel : Control
         }
 
         using var shade = new SolidBrush(Color.FromArgb(225, HudColors.Ink));
-        graphics.FillRectangle(shade, 7, Height - 43, Width - 14, 36);
-        using var nameFont = new Font("Consolas", 9f, FontStyle.Bold);
-        using var classFont = new Font("Consolas", 6.7f, FontStyle.Bold);
+        graphics.FillRectangle(shade, 7, height - 43, width - 14, 36);
+        using var nameFont = PixelArt.CreateFont(9f);
+        using var classFont = PixelArt.CreateFont(6.7f);
         var copy = HudCopy.Hero(character);
-        TextRenderer.DrawText(graphics, copy.Name, nameFont, new Rectangle(8, Height - 41, Width - 16, 17), HudColors.Gold, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
-        TextRenderer.DrawText(graphics, copy.Class, classFont, new Rectangle(8, Height - 23, Width - 16, 13), HudColors.Cream, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+        PixelArt.DrawText(graphics, copy.Name, nameFont, new Rectangle(8, height - 41, width - 16, 17), HudColors.Gold, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+        PixelArt.DrawText(graphics, copy.Class, classFont, new Rectangle(8, height - 23, width - 16, 13), HudColors.Cream, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+        graphics.Restore(state);
     }
 
     protected override void Dispose(bool disposing)
@@ -387,37 +407,42 @@ internal sealed class RpgStatsPanel : Control
     {
         base.OnPaint(eventArgs);
         var graphics = eventArgs.Graphics;
+        var state = graphics.Save();
+        graphics.ScaleTransform((float)HudScale.Factor, (float)HudScale.Factor);
+        var width = HudScale.Logical(Width);
+        var height = HudScale.Logical(Height);
         graphics.SmoothingMode = SmoothingMode.None;
-        PixelArt.DrawPanel(graphics, ClientRectangle, HudColors.Cyan);
+        PixelArt.DrawPanel(graphics, new Rectangle(0, 0, width, height), HudColors.Cyan);
 
         var tokens = Math.Max(0, _lifetimeTokens ?? 0);
         var level = RpgProgress.GetLevel(tokens);
         var progress = RpgProgress.GetLevelProgress(tokens, level);
-        using var levelFont = new Font("Consolas", Height >= 195 ? 17f : 14f, FontStyle.Bold);
-        using var labelFont = new Font("Consolas", 7f, FontStyle.Bold);
-        using var valueFont = new Font("Consolas", Height >= 195 ? 9f : 8f, FontStyle.Bold);
+        using var levelFont = PixelArt.CreateFont(height >= 195 ? 17f : 14f);
+        using var labelFont = PixelArt.CreateFont(7f);
+        using var valueFont = PixelArt.CreateFont(height >= 195 ? 9f : 8f);
 
-        var compact = Height < 195;
-        TextRenderer.DrawText(graphics, $"LV.{level:00}", levelFont, new Rectangle(11, compact ? 7 : 9, Width - 22, 28), HudColors.Gold, TextFormatFlags.Left | TextFormatFlags.NoPadding);
-        TextRenderer.DrawText(graphics, HudCopy.StatusTitle, labelFont, new Rectangle(12, compact ? 32 : 37, Width - 24, 14), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding);
+        var compact = height < 195;
+        PixelArt.DrawText(graphics, $"LV.{level:00}", levelFont, new Rectangle(11, compact ? 7 : 9, width - 22, 28), HudColors.Gold, TextFormatFlags.Left | TextFormatFlags.NoPadding);
+        PixelArt.DrawText(graphics, HudCopy.StatusTitle, labelFont, new Rectangle(12, compact ? 32 : 37, width - 24, 14), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding);
 
         var stamina = Math.Clamp(_staminaPercent ?? 0m, 0m, 100m);
-        DrawBar(graphics, HudCopy.Stamina, stamina, $"{stamina:0.#} / 100", compact ? 45 : 56, HudColors.Green, labelFont);
-        DrawBar(graphics, HudCopy.Experience, progress, $"{progress:0.#}%", compact ? 75 : 91, HudColors.Cyan, labelFont);
+        DrawBar(graphics, HudCopy.Stamina, stamina, $"{stamina:0.#} / 100", compact ? 45 : 56, HudColors.Green, labelFont, width);
+        DrawBar(graphics, HudCopy.Experience, progress, $"{progress:0.#}%", compact ? 75 : 91, HudColors.Cyan, labelFont, width);
 
         var textTop = compact ? 108 : 128;
-        TextRenderer.DrawText(graphics, HudCopy.Lifetime, labelFont, new Rectangle(12, textTop, Width - 24, 13), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
-        TextRenderer.DrawText(graphics, PixelArt.FormatNumber(_lifetimeTokens), valueFont, new Rectangle(12, textTop + 13, Width - 24, 20), HudColors.Cream, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+        PixelArt.DrawText(graphics, HudCopy.Lifetime, labelFont, new Rectangle(12, textTop, width - 24, 13), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+        PixelArt.DrawText(graphics, PixelArt.FormatNumber(_lifetimeTokens), valueFont, new Rectangle(12, textTop + 13, width - 24, 20), HudColors.Cream, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
         var todayOffset = compact ? 29 : 37;
-        TextRenderer.DrawText(graphics, HudCopy.Today, labelFont, new Rectangle(12, textTop + todayOffset, Width - 24, 13), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
-        TextRenderer.DrawText(graphics, $"+{PixelArt.FormatNumber(_todayTokens)}", valueFont, new Rectangle(12, textTop + todayOffset + 13, Width - 24, 20), HudColors.Gold, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+        PixelArt.DrawText(graphics, HudCopy.Today, labelFont, new Rectangle(12, textTop + todayOffset, width - 24, 13), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+        PixelArt.DrawText(graphics, $"+{PixelArt.FormatNumber(_todayTokens)}", valueFont, new Rectangle(12, textTop + todayOffset + 13, width - 24, 20), HudColors.Gold, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+        graphics.Restore(state);
     }
 
-    private void DrawBar(Graphics graphics, string label, decimal percent, string value, int y, Color color, Font font)
+    private static void DrawBar(Graphics graphics, string label, decimal percent, string value, int y, Color color, Font font, int width)
     {
-        TextRenderer.DrawText(graphics, label, font, new Rectangle(12, y, 32, 13), HudColors.Text, TextFormatFlags.Left | TextFormatFlags.NoPadding);
-        TextRenderer.DrawText(graphics, value, font, new Rectangle(48, y, Width - 60, 13), HudColors.Cream, TextFormatFlags.Right | TextFormatFlags.NoPadding);
-        PixelArt.DrawBar(graphics, new Rectangle(12, y + 15, Width - 24, 10), percent, color);
+        PixelArt.DrawText(graphics, label, font, new Rectangle(12, y, 32, 13), HudColors.Text, TextFormatFlags.Left | TextFormatFlags.NoPadding);
+        PixelArt.DrawText(graphics, value, font, new Rectangle(48, y, width - 60, 13), HudColors.Cream, TextFormatFlags.Right | TextFormatFlags.NoPadding);
+        PixelArt.DrawBar(graphics, new Rectangle(12, y + 15, width - 24, 10), percent, color);
     }
 }
 
@@ -441,36 +466,66 @@ internal sealed class DailyUsageChart : Control
     {
         base.OnPaint(eventArgs);
         var graphics = eventArgs.Graphics;
+        var state = graphics.Save();
+        graphics.ScaleTransform((float)HudScale.Factor, (float)HudScale.Factor);
+        var width = HudScale.Logical(Width);
+        var height = HudScale.Logical(Height);
         graphics.SmoothingMode = SmoothingMode.None;
-        PixelArt.DrawPanel(graphics, ClientRectangle, HudColors.Grid);
-        using var titleFont = new Font("Consolas", 7f, FontStyle.Bold);
-        TextRenderer.DrawText(graphics, HudCopy.ChartTitle, titleFont, new Rectangle(11, 8, Width - 22, 14), HudColors.Gold, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+        PixelArt.DrawPanel(graphics, new Rectangle(0, 0, width, height), HudColors.Grid);
+        using var titleFont = PixelArt.CreateFont(7f);
+        PixelArt.DrawText(graphics, HudCopy.ChartTitle, titleFont, new Rectangle(11, 8, width - 22, 14), HudColors.Gold, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
         if (_usage.Count == 0)
         {
-            TextRenderer.DrawText(graphics, HudCopy.EmptyHistory, titleFont, ClientRectangle, HudColors.Muted, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            PixelArt.DrawText(graphics, HudCopy.EmptyHistory, titleFont, new Rectangle(0, 0, width, height), HudColors.Muted, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            graphics.Restore(state);
             return;
         }
 
         var maximum = Math.Max(1L, _usage.Max(item => item.Tokens));
         var top = 28;
-        var bottom = Height - 19;
-        var slot = (Width - 20f) / 7f;
-        using var dayFont = new Font("Consolas", 6f, FontStyle.Bold);
+        var bottom = height - 19;
+        var slot = (width - 20f) / 7f;
+        using var dayFont = PixelArt.CreateFont(6f);
         for (var index = 0; index < 7; index++)
         {
             DailyTokenUsage? item = index < _usage.Count ? _usage[index] : null;
-            var height = item is null ? 0 : (int)Math.Round((double)item.Tokens / maximum * (bottom - top - 4));
+            var barHeight = item is null ? 0 : (int)Math.Round((double)item.Tokens / maximum * (bottom - top - 4));
             var x = 12 + (int)(index * slot);
             using var bar = new SolidBrush(index == _usage.Count - 1 ? HudColors.Gold : HudColors.Cyan);
-            graphics.FillRectangle(bar, x, bottom - height, Math.Max(5, (int)slot - 7), height);
+            graphics.FillRectangle(bar, x, bottom - barHeight, Math.Max(5, (int)slot - 7), barHeight);
             var day = item?.Date.ToString("MM/dd", CultureInfo.InvariantCulture) ?? "--";
-            TextRenderer.DrawText(graphics, day, dayFont, new Rectangle(x - 2, bottom + 2, (int)slot, 10), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding);
+            PixelArt.DrawText(graphics, day, dayFont, new Rectangle(x - 2, bottom + 2, (int)slot, 10), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding);
         }
+        graphics.Restore(state);
     }
 }
 
 internal static class PixelArt
 {
+    internal static Font CreateFont(float pointSize, FontStyle style = FontStyle.Bold) =>
+        new("Consolas", pointSize * 96f / 72f, style, GraphicsUnit.Pixel);
+
+    internal static Font CreateHudFont(float pointSize, FontStyle style = FontStyle.Bold) =>
+        new("Consolas", pointSize * 96f / 72f * (float)HudScale.Factor, style, GraphicsUnit.Pixel);
+
+    internal static void DrawText(Graphics graphics, string text, Font logicalFont, Rectangle logicalBounds, Color color, TextFormatFlags flags)
+    {
+        var state = graphics.Save();
+        graphics.ResetTransform();
+        using var scaledFont = new Font(
+            logicalFont.FontFamily,
+            logicalFont.Size * (float)HudScale.Factor,
+            logicalFont.Style,
+            GraphicsUnit.Pixel);
+        var bounds = new Rectangle(
+            HudScale.Px(logicalBounds.X),
+            HudScale.Px(logicalBounds.Y),
+            HudScale.Px(logicalBounds.Width),
+            HudScale.Px(logicalBounds.Height));
+        TextRenderer.DrawText(graphics, text, scaledFont, bounds, color, flags);
+        graphics.Restore(state);
+    }
+
     internal static void DrawPanel(Graphics graphics, Rectangle bounds, Color accent)
     {
         if (bounds.Width < 4 || bounds.Height < 4)
