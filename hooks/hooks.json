@@ -1,0 +1,32 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"${PLUGIN_ROOT}\\scripts\\start-desktop.ps1\"",
+            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"${PLUGIN_ROOT}\\scripts\\start-desktop.ps1\"",
+            "timeoutSec": 15,
+            "async": true,
+            "statusMessage": "Starting Codex Token Quest HUD"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"${PLUGIN_ROOT}\\scripts\\start-desktop.ps1\"",
+            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"${PLUGIN_ROOT}\\scripts\\start-desktop.ps1\"",
+            "timeoutSec": 15,
+            "async": true,
+            "statusMessage": "Ensuring Codex Token Quest HUD is running"
+          }
+        ]
+      }
+    ]
+  }
+}

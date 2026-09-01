@@ -1,0 +1,21 @@
+{
+  "name": "codex-token-quest",
+  "version": "1.0.0+codex.20260901033116",
+  "description": "Turn Codex token usage and reset times into a native pixel RPG HUD for Codex Desktop.",
+  "author": {
+    "name": "Local developer"
+  },
+  "hooks": "./hooks/hooks.json",
+  "interface": {
+    "displayName": "Codex Token Quest",
+    "shortDescription": "A pixel RPG HUD for Codex usage.",
+    "longDescription": "A native C# pixel RPG HUD that follows Codex Desktop and turns authenticated quota windows, token usage, experience levels, stamina, and reset times into a game interface.",
+    "developerName": "Local developer",
+    "category": "Productivity",
+    "capabilities": [
+      "desktop-companion",
+      "auto-refresh"
+    ],
+    "defaultPrompt": "Show the Codex Token Quest desktop HUD."
+  }
+}
