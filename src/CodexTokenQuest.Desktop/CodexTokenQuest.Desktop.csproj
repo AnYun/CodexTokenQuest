@@ -13,7 +13,7 @@
     <FrameworkReference Include="Microsoft.WindowsDesktop.App.WPF" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\..\assets\rpg\hero-sprite-sheet.png" Link="assets\rpg\hero-sprite-sheet.png">
+    <Content Include="..\..\assets\rpg\hero-sprite-sheet*.png" Link="assets\rpg\%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

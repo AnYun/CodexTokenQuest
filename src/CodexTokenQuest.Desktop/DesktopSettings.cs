@@ -11,6 +11,8 @@ internal sealed record DesktopSettings
     public int RefreshMinutes { get; init; } = DefaultRefreshMinutes;
     public bool CompactMode { get; init; } = true;
     public int CharacterIndex { get; init; }
+    public int ThemeIndex { get; init; }
+    public string SelectedPanel { get; init; } = "CAMP";
 
     private static readonly string SettingsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CodexTokenQuest");
     private static readonly string SettingsPath = Path.Combine(SettingsDirectory, "settings.json");
@@ -39,6 +41,8 @@ internal sealed record DesktopSettings
     internal DesktopSettings Normalize() => this with
     {
         RefreshMinutes = Math.Clamp(RefreshMinutes, MinimumRefreshMinutes, MaximumRefreshMinutes),
-        CharacterIndex = Math.Clamp(CharacterIndex, 0, RpgHeroPanel.Characters.Count - 1)
+        CharacterIndex = Math.Clamp(CharacterIndex, 0, RpgHeroPanel.Characters.Count - 1),
+        ThemeIndex = Math.Clamp(ThemeIndex, 0, Enum.GetValues<HudTheme>().Length - 1),
+        SelectedPanel = SelectedPanel is "CAMP" or "QUESTS" or "HISTORY" ? SelectedPanel : "CAMP"
     };
 }

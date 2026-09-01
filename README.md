@@ -38,11 +38,11 @@ The companion is a standalone Windows UI and does not install a Codex skill or M
 - appears automatically in the lower-right corner only while the desktop host is visibly in Codex mode;
 - hides while the desktop host is closed, minimized, switched to ChatGPT mode, or behind another application, then returns when Codex mode is in the foreground again;
 - follows Codex when it moves or resizes;
-- provides a compact pixel-art RPG camp with a hero portrait, level, EXP, today's quest EXP, and weekly stamina;
+- provides a pixel-art RPG camp with a hero portrait, level, EXP, today's quest EXP, and weekly stamina;
 - turns lifetime tokens into exponential RPG experience levels from 1 to 99;
 - includes four selectable pixel heroes unlocked at levels 1, 10, 25, and 50, and remembers the selected hero;
-- provides a full adventure-map mode with every stamina module, reset countdowns, and a seven-day quest EXP chart;
-- switches modes with the `MAP` / `CAMP` control and remembers the selected mode;
+- separates the HUD into remembered `CAMP`, `QUESTS`, and `HISTORY` panels for character progress, stamina modules, and the seven-day quest EXP chart;
+- includes four persistent visual themes—Pixel Dungeon, Arcane Glass, Guild Ledger, and Code Terminal—cycled from the style control;
 - refreshes account usage every 5 minutes by default and reset countdowns every second;
 - lets you set a persistent 1–1440 minute refresh interval from the notification-area menu or the update text at the bottom of the window;
 - stays available from the Windows notification area.

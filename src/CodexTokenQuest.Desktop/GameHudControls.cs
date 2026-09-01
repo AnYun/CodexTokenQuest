@@ -3,21 +3,185 @@ using System.Globalization;
 
 namespace CodexTokenQuest.Desktop;
 
+internal enum HudTheme
+{
+    PixelDungeon,
+    ArcaneGlass,
+    GuildLedger,
+    CodeTerminal
+}
+
+internal sealed record HudPalette(
+    Color Background,
+    Color Panel,
+    Color PanelBright,
+    Color Ink,
+    Color Cream,
+    Color Gold,
+    Color Cyan,
+    Color Green,
+    Color Amber,
+    Color Red,
+    Color Text,
+    Color Muted,
+    Color Grid);
+
 internal static class HudColors
 {
-    internal static readonly Color Background = Color.FromArgb(18, 16, 29);
-    internal static readonly Color Panel = Color.FromArgb(32, 30, 49);
-    internal static readonly Color PanelBright = Color.FromArgb(46, 42, 66);
-    internal static readonly Color Ink = Color.FromArgb(15, 13, 24);
-    internal static readonly Color Cream = Color.FromArgb(255, 238, 196);
-    internal static readonly Color Gold = Color.FromArgb(255, 203, 79);
-    internal static readonly Color Cyan = Color.FromArgb(91, 224, 255);
-    internal static readonly Color Green = Color.FromArgb(92, 224, 112);
-    internal static readonly Color Amber = Color.FromArgb(255, 162, 72);
-    internal static readonly Color Red = Color.FromArgb(235, 76, 83);
-    internal static readonly Color Text = Color.FromArgb(250, 244, 225);
-    internal static readonly Color Muted = Color.FromArgb(167, 154, 174);
-    internal static readonly Color Grid = Color.FromArgb(92, 76, 112);
+    private static readonly HudPalette[] Palettes =
+    [
+        new(Color.FromArgb(18, 16, 29), Color.FromArgb(32, 30, 49), Color.FromArgb(46, 42, 66), Color.FromArgb(15, 13, 24), Color.FromArgb(255, 238, 196), Color.FromArgb(255, 203, 79), Color.FromArgb(91, 224, 255), Color.FromArgb(92, 224, 112), Color.FromArgb(255, 162, 72), Color.FromArgb(235, 76, 83), Color.FromArgb(250, 244, 225), Color.FromArgb(167, 154, 174), Color.FromArgb(92, 76, 112)),
+        new(Color.FromArgb(10, 10, 30), Color.FromArgb(25, 24, 62), Color.FromArgb(43, 39, 92), Color.FromArgb(7, 7, 24), Color.FromArgb(238, 237, 255), Color.FromArgb(199, 149, 255), Color.FromArgb(88, 205, 255), Color.FromArgb(98, 235, 195), Color.FromArgb(255, 176, 92), Color.FromArgb(255, 95, 137), Color.FromArgb(245, 243, 255), Color.FromArgb(168, 163, 205), Color.FromArgb(91, 75, 158)),
+        new(Color.FromArgb(61, 42, 25), Color.FromArgb(224, 197, 143), Color.FromArgb(239, 218, 171), Color.FromArgb(55, 35, 20), Color.FromArgb(62, 40, 22), Color.FromArgb(139, 91, 38), Color.FromArgb(78, 96, 71), Color.FromArgb(75, 111, 55), Color.FromArgb(160, 91, 35), Color.FromArgb(151, 52, 39), Color.FromArgb(55, 35, 20), Color.FromArgb(112, 82, 52), Color.FromArgb(151, 111, 66)),
+        new(Color.FromArgb(3, 10, 7), Color.FromArgb(7, 20, 13), Color.FromArgb(12, 35, 21), Color.FromArgb(1, 7, 4), Color.FromArgb(197, 255, 148), Color.FromArgb(255, 192, 53), Color.FromArgb(95, 255, 157), Color.FromArgb(144, 255, 65), Color.FromArgb(255, 187, 51), Color.FromArgb(255, 83, 83), Color.FromArgb(171, 255, 112), Color.FromArgb(91, 156, 80), Color.FromArgb(38, 91, 52))
+    ];
+
+    internal static HudTheme Theme { get; private set; }
+    private static HudPalette Current => Palettes[(int)Theme];
+    internal static Color Background => Current.Background;
+    internal static Color Panel => Current.Panel;
+    internal static Color PanelBright => Current.PanelBright;
+    internal static Color Ink => Current.Ink;
+    internal static Color Cream => Current.Cream;
+    internal static Color Gold => Current.Gold;
+    internal static Color Cyan => Current.Cyan;
+    internal static Color Green => Current.Green;
+    internal static Color Amber => Current.Amber;
+    internal static Color Red => Current.Red;
+    internal static Color Text => Current.Text;
+    internal static Color Muted => Current.Muted;
+    internal static Color Grid => Current.Grid;
+
+    internal static void SetTheme(HudTheme theme) => Theme = theme;
+}
+
+internal static class HudCopy
+{
+    internal static string Brand => HudColors.Theme switch
+    {
+        HudTheme.PixelDungeon => "◆ CODEX TOKEN QUEST ◆",
+        HudTheme.ArcaneGlass => "✦ ARCANE TOKEN ORACLE ✦",
+        HudTheme.GuildLedger => "◆ ADVENTURERS' LEDGER ◆",
+        _ => "> CODEX_USAGE_MONITOR"
+    };
+
+    internal static (string Camp, string Quests, string History) Tabs => HudColors.Theme switch
+    {
+        HudTheme.PixelDungeon => ("CAMP", "QUESTS", "HISTORY"),
+        HudTheme.ArcaneGlass => ("SANCTUM", "RUNES", "ECHOES"),
+        HudTheme.GuildLedger => ("GUILD", "CONTRACTS", "LEDGER"),
+        _ => ("STATUS", "LIMITS", "LOGS")
+    };
+
+    internal static string QuestTitle => HudColors.Theme switch
+    {
+        HudTheme.PixelDungeon => "⚔ STAMINA DUNGEON // WEEKLY LIMITS",
+        HudTheme.ArcaneGlass => "✦ RESONANCE RUNES // ARCANE LIMITS",
+        HudTheme.GuildLedger => "◆ ACTIVE CONTRACTS // WEEKLY ALLOWANCE",
+        _ => "> QUOTA_WINDOWS --WEEKLY"
+    };
+
+    internal static string Loading => HudColors.Theme switch
+    {
+        HudTheme.PixelDungeon => "READING QUEST LOG...",
+        HudTheme.ArcaneGlass => "DIVINING TOKEN ECHOES...",
+        HudTheme.GuildLedger => "OPENING GUILD RECORDS...",
+        _ => "READING_USAGE_STREAM..."
+    };
+
+    internal static string Ready(DateTimeOffset time) => HudColors.Theme switch
+    {
+        HudTheme.PixelDungeon => $"SAVE OK ◆ {time:HH:mm:ss}",
+        HudTheme.ArcaneGlass => $"ORACLE ATTUNED ✦ {time:HH:mm:ss}",
+        HudTheme.GuildLedger => $"LEDGER SEALED ◆ {time:HH:mm:ss}",
+        _ => $"STATUS_OK :: {time:HH:mm:ss}"
+    };
+
+    internal static string Lost => HudColors.Theme switch
+    {
+        HudTheme.PixelDungeon => "QUEST LOG LOST ◆ RETRY",
+        HudTheme.ArcaneGlass => "DIVINATION BROKEN ✦ RETRY",
+        HudTheme.GuildLedger => "LEDGER UNAVAILABLE ◆ RETRY",
+        _ => "ERR_USAGE_STREAM :: RETRY"
+    };
+
+    internal static string Footer(int minutes) => HudColors.Theme switch
+    {
+        HudTheme.PixelDungeon => $"AUTO-SAVE ◆ SYNC {minutes}M ◆ OPTIONS",
+        HudTheme.ArcaneGlass => $"AUTO-ATTUNE ✦ {minutes}M ✦ SETTINGS",
+        HudTheme.GuildLedger => $"AUTO-RECORD ◆ {minutes}M ◆ OPTIONS",
+        _ => $"AUTO_SYNC={minutes}M :: CONFIG"
+    };
+
+    internal static string EmptyHistory => HudColors.Theme switch
+    {
+        HudTheme.ArcaneGlass => "NO ECHOES DETECTED", HudTheme.GuildLedger => "NO ENTRIES RECORDED",
+        HudTheme.CodeTerminal => "NO_LOG_DATA", _ => "NO QUEST RECORD"
+    };
+
+    internal static string StatusTitle => HudColors.Theme switch
+    {
+        HudTheme.PixelDungeon => "ADVENTURER STATUS",
+        HudTheme.ArcaneGlass => "ARCANE SIGNATURE",
+        HudTheme.GuildLedger => "GUILD RECORD",
+        _ => "AGENT STATUS"
+    };
+
+    internal static string Stamina => HudColors.Theme switch
+    {
+        HudTheme.ArcaneGlass => "MANA", HudTheme.GuildLedger => "VIGOR",
+        HudTheme.CodeTerminal => "QUOTA", _ => "STA"
+    };
+
+    internal static string Experience => HudColors.Theme switch
+    {
+        HudTheme.ArcaneGlass => "AURA", HudTheme.GuildLedger => "RENOWN",
+        HudTheme.CodeTerminal => "LOAD", _ => "EXP"
+    };
+
+    internal static string Lifetime => HudColors.Theme switch
+    {
+        HudTheme.ArcaneGlass => "CRYSTAL MEMORY", HudTheme.GuildLedger => "LIFETIME RENOWN",
+        HudTheme.CodeTerminal => "TOTAL TOKENS", _ => "TOTAL EXP"
+    };
+
+    internal static string Today => HudColors.Theme switch
+    {
+        HudTheme.ArcaneGlass => "TODAY'S SPARK", HudTheme.GuildLedger => "TODAY'S BOUNTY",
+        HudTheme.CodeTerminal => "SESSION TOKENS", _ => "TODAY QUEST EXP"
+    };
+
+    internal static string Reset => HudColors.Theme switch
+    {
+        HudTheme.ArcaneGlass => "RECHARGE", HudTheme.GuildLedger => "RENEWAL",
+        HudTheme.CodeTerminal => "RESET_AT", _ => "RESET"
+    };
+
+    internal static string ChartTitle => HudColors.Theme switch
+    {
+        HudTheme.ArcaneGlass => "ECHOES // 7-DAY RESONANCE",
+        HudTheme.GuildLedger => "LEDGER // 7-DAY BOUNTY",
+        HudTheme.CodeTerminal => "> TOKEN_LOG --LAST=7D",
+        _ => "QUEST LOG // 7-DAY EXP"
+    };
+
+    internal static (string Name, string Class) Hero(RpgCharacter character)
+    {
+        var index = character.Name switch { "LYRA" => 1, "SYLVI" => 2, "NOVA" => 3, _ => 0 };
+        return HudColors.Theme switch
+        {
+            HudTheme.ArcaneGlass => (
+                $"✦ {new[] { "CAEL", "SELENE", "IRIS", "ORION" }[index]} ✦",
+                new[] { "CRYSTAL WARDEN", "ASTRAL ORACLE", "PRISM RANGER", "RUNE SENTINEL" }[index]),
+            HudTheme.GuildLedger => (
+                new[] { "ROWAN", "ELSPETH", "BRIAR", "GARRICK" }[index],
+                new[] { "GUILD SWORD", "LEDGER ARCANIST", "CONTRACT RANGER", "GUILD MARSHAL" }[index]),
+            HudTheme.CodeTerminal => (
+                $"[{new[] { "CIPHER", "SYNTAX", "PACKET", "KERNEL" }[index]}]",
+                $"ROLE::{new[] { "CODE_SENTINEL", "SYNTAX_WITCH", "PACKET_RANGER", "FIREWALL_KNIGHT" }[index]}"),
+            _ => ($"◀ {character.Name} ▶", character.ClassName)
+        };
+    }
 }
 
 internal sealed record RpgCharacter(string Name, string ClassName, int UnlockLevel, int Column, int Row);
@@ -72,7 +236,7 @@ internal sealed class RpgHeroPanel : Control
         new("NOVA", "RUNE KNIGHT", 50, 1, 1)
     ];
 
-    private readonly Image? _spriteSheet;
+    private readonly Image?[] _spriteSheets = new Image?[Enum.GetValues<HudTheme>().Length];
     private int _characterIndex;
     private int _level = 1;
 
@@ -99,11 +263,17 @@ internal sealed class RpgHeroPanel : Control
         DoubleBuffered = true;
         BackColor = HudColors.Panel;
         Cursor = Cursors.Hand;
-        var path = Path.Combine(AppContext.BaseDirectory, "assets", "rpg", "hero-sprite-sheet.png");
-        if (File.Exists(path))
+        var names = new[]
         {
+            "hero-sprite-sheet.png", "hero-sprite-sheet-arcane.png",
+            "hero-sprite-sheet-guild.png", "hero-sprite-sheet-terminal.png"
+        };
+        for (var index = 0; index < names.Length; index++)
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, "assets", "rpg", names[index]);
+            if (!File.Exists(path)) continue;
             using var source = Image.FromFile(path);
-            _spriteSheet = new Bitmap(source);
+            _spriteSheets[index] = new Bitmap(source);
         }
     }
 
@@ -134,34 +304,60 @@ internal sealed class RpgHeroPanel : Control
         PixelArt.DrawPanel(graphics, ClientRectangle, HudColors.Gold);
 
         var heroArea = new Rectangle(7, 7, Width - 14, Math.Max(70, Height - 51));
-        using var sky = new SolidBrush(Color.FromArgb(35, 47, 73));
+        var skyColor = HudColors.Theme switch
+        {
+            HudTheme.ArcaneGlass => Color.FromArgb(38, 29, 86),
+            HudTheme.GuildLedger => Color.FromArgb(184, 149, 91),
+            HudTheme.CodeTerminal => Color.FromArgb(4, 18, 10),
+            _ => Color.FromArgb(35, 47, 73)
+        };
+        using var sky = new SolidBrush(skyColor);
         graphics.FillRectangle(sky, heroArea);
         PixelArt.DrawDungeonBackdrop(graphics, heroArea);
 
         var character = Characters[_characterIndex];
-        if (_spriteSheet is not null)
+        var spriteSheet = _spriteSheets[(int)HudColors.Theme] ?? _spriteSheets[(int)HudTheme.PixelDungeon];
+        if (spriteSheet is not null)
         {
-            var cellWidth = _spriteSheet.Width / 2;
-            var cellHeight = _spriteSheet.Height / 2;
+            var cellWidth = spriteSheet.Width / 2;
+            var cellHeight = spriteSheet.Height / 2;
             var source = new Rectangle(character.Column * cellWidth, character.Row * cellHeight, cellWidth, cellHeight);
-            var inset = Math.Max(3, heroArea.Width / 20);
-            var target = new Rectangle(heroArea.X + inset, heroArea.Y + 2, heroArea.Width - inset * 2, heroArea.Height - 3);
-            graphics.DrawImage(_spriteSheet, target, source, GraphicsUnit.Pixel);
+            const int horizontalPadding = 8;
+            const int verticalPadding = 6;
+            var scale = Math.Min(
+                (heroArea.Width - horizontalPadding * 2) / (float)cellWidth,
+                (heroArea.Height - verticalPadding * 2) / (float)cellHeight);
+            var targetWidth = Math.Max(1, (int)Math.Floor(cellWidth * scale));
+            var targetHeight = Math.Max(1, (int)Math.Floor(cellHeight * scale));
+            var target = new Rectangle(
+                heroArea.X + (heroArea.Width - targetWidth) / 2,
+                heroArea.Y + verticalPadding,
+                targetWidth,
+                targetHeight);
+            if (HudColors.Theme == HudTheme.PixelDungeon)
+            {
+                graphics.DrawImage(spriteSheet, target, source, GraphicsUnit.Pixel);
+            }
+            else
+            {
+                graphics.DrawImage(spriteSheet, target, source, GraphicsUnit.Pixel);
+            }
         }
 
         using var shade = new SolidBrush(Color.FromArgb(225, HudColors.Ink));
         graphics.FillRectangle(shade, 7, Height - 43, Width - 14, 36);
         using var nameFont = new Font("Consolas", 9f, FontStyle.Bold);
         using var classFont = new Font("Consolas", 6.7f, FontStyle.Bold);
-        TextRenderer.DrawText(graphics, $"◀ {character.Name} ▶", nameFont, new Rectangle(8, Height - 41, Width - 16, 17), HudColors.Gold, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding);
-        TextRenderer.DrawText(graphics, character.ClassName, classFont, new Rectangle(8, Height - 23, Width - 16, 13), HudColors.Cream, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding);
+        var copy = HudCopy.Hero(character);
+        TextRenderer.DrawText(graphics, copy.Name, nameFont, new Rectangle(8, Height - 41, Width - 16, 17), HudColors.Gold, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+        TextRenderer.DrawText(graphics, copy.Class, classFont, new Rectangle(8, Height - 23, Width - 16, 13), HudColors.Cream, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
     }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
-            _spriteSheet?.Dispose();
+            foreach (var spriteSheet in _spriteSheets) spriteSheet?.Dispose();
         }
         base.Dispose(disposing);
     }
@@ -203,17 +399,17 @@ internal sealed class RpgStatsPanel : Control
 
         var compact = Height < 195;
         TextRenderer.DrawText(graphics, $"LV.{level:00}", levelFont, new Rectangle(11, compact ? 7 : 9, Width - 22, 28), HudColors.Gold, TextFormatFlags.Left | TextFormatFlags.NoPadding);
-        TextRenderer.DrawText(graphics, "ADVENTURER STATUS", labelFont, new Rectangle(12, compact ? 32 : 37, Width - 24, 14), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding);
+        TextRenderer.DrawText(graphics, HudCopy.StatusTitle, labelFont, new Rectangle(12, compact ? 32 : 37, Width - 24, 14), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding);
 
         var stamina = Math.Clamp(_staminaPercent ?? 0m, 0m, 100m);
-        DrawBar(graphics, "STA", stamina, $"{stamina:0.#} / 100", compact ? 45 : 56, HudColors.Green, labelFont);
-        DrawBar(graphics, "EXP", progress, $"{progress:0.#}%", compact ? 75 : 91, HudColors.Cyan, labelFont);
+        DrawBar(graphics, HudCopy.Stamina, stamina, $"{stamina:0.#} / 100", compact ? 45 : 56, HudColors.Green, labelFont);
+        DrawBar(graphics, HudCopy.Experience, progress, $"{progress:0.#}%", compact ? 75 : 91, HudColors.Cyan, labelFont);
 
         var textTop = compact ? 108 : 128;
-        TextRenderer.DrawText(graphics, "TOTAL EXP", labelFont, new Rectangle(12, textTop, Width - 24, 13), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding);
+        TextRenderer.DrawText(graphics, HudCopy.Lifetime, labelFont, new Rectangle(12, textTop, Width - 24, 13), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
         TextRenderer.DrawText(graphics, PixelArt.FormatNumber(_lifetimeTokens), valueFont, new Rectangle(12, textTop + 13, Width - 24, 20), HudColors.Cream, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
         var todayOffset = compact ? 29 : 37;
-        TextRenderer.DrawText(graphics, "TODAY QUEST EXP", labelFont, new Rectangle(12, textTop + todayOffset, Width - 24, 13), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding);
+        TextRenderer.DrawText(graphics, HudCopy.Today, labelFont, new Rectangle(12, textTop + todayOffset, Width - 24, 13), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
         TextRenderer.DrawText(graphics, $"+{PixelArt.FormatNumber(_todayTokens)}", valueFont, new Rectangle(12, textTop + todayOffset + 13, Width - 24, 20), HudColors.Gold, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
     }
 
@@ -248,10 +444,10 @@ internal sealed class DailyUsageChart : Control
         graphics.SmoothingMode = SmoothingMode.None;
         PixelArt.DrawPanel(graphics, ClientRectangle, HudColors.Grid);
         using var titleFont = new Font("Consolas", 7f, FontStyle.Bold);
-        TextRenderer.DrawText(graphics, "QUEST LOG // 7-DAY EXP", titleFont, new Rectangle(11, 8, Width - 22, 14), HudColors.Gold, TextFormatFlags.Left | TextFormatFlags.NoPadding);
+        TextRenderer.DrawText(graphics, HudCopy.ChartTitle, titleFont, new Rectangle(11, 8, Width - 22, 14), HudColors.Gold, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
         if (_usage.Count == 0)
         {
-            TextRenderer.DrawText(graphics, "NO QUEST RECORD", titleFont, ClientRectangle, HudColors.Muted, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            TextRenderer.DrawText(graphics, HudCopy.EmptyHistory, titleFont, ClientRectangle, HudColors.Muted, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
             return;
         }
 
@@ -281,17 +477,39 @@ internal static class PixelArt
         {
             return;
         }
-        using var outer = new Pen(HudColors.Ink, 3f);
-        using var middle = new Pen(accent, 2f);
-        using var inner = new Pen(Color.FromArgb(115, HudColors.Cream));
+        var theme = HudColors.Theme;
+        using var outer = new Pen(HudColors.Ink, theme == HudTheme.CodeTerminal ? 1f : 3f);
+        using var middle = new Pen(accent, theme == HudTheme.ArcaneGlass ? 1f : 2f);
+        using var inner = new Pen(Color.FromArgb(theme == HudTheme.GuildLedger ? 150 : 90, HudColors.Cream));
         graphics.DrawRectangle(outer, 1, 1, bounds.Width - 3, bounds.Height - 3);
         graphics.DrawRectangle(middle, 3, 3, bounds.Width - 7, bounds.Height - 7);
-        graphics.DrawRectangle(inner, 5, 5, bounds.Width - 11, bounds.Height - 11);
+        if (theme != HudTheme.CodeTerminal)
+        {
+            graphics.DrawRectangle(inner, 5, 5, bounds.Width - 11, bounds.Height - 11);
+        }
         using var corner = new SolidBrush(accent);
-        graphics.FillRectangle(corner, 3, 3, 6, 3);
-        graphics.FillRectangle(corner, bounds.Width - 9, 3, 6, 3);
-        graphics.FillRectangle(corner, 3, bounds.Height - 6, 6, 3);
-        graphics.FillRectangle(corner, bounds.Width - 9, bounds.Height - 6, 6, 3);
+        var cornerSize = theme == HudTheme.ArcaneGlass ? 10 : 6;
+        graphics.FillRectangle(corner, 3, 3, cornerSize, 3);
+        graphics.FillRectangle(corner, bounds.Width - cornerSize - 3, 3, cornerSize, 3);
+        graphics.FillRectangle(corner, 3, bounds.Height - 6, cornerSize, 3);
+        graphics.FillRectangle(corner, bounds.Width - cornerSize - 3, bounds.Height - 6, cornerSize, 3);
+
+        if (theme == HudTheme.GuildLedger)
+        {
+            using var grain = new Pen(Color.FromArgb(28, HudColors.Ink));
+            for (var y = 12; y < bounds.Height - 8; y += 17)
+            {
+                graphics.DrawLine(grain, 8, y, bounds.Width - 9, y);
+            }
+        }
+        else if (theme == HudTheme.CodeTerminal)
+        {
+            using var scan = new Pen(Color.FromArgb(18, HudColors.Green));
+            for (var y = 8; y < bounds.Height - 4; y += 4)
+            {
+                graphics.DrawLine(scan, 4, y, bounds.Width - 5, y);
+            }
+        }
     }
 
     internal static void DrawBar(Graphics graphics, Rectangle bounds, decimal percent, Color color)
@@ -310,9 +528,18 @@ internal static class PixelArt
 
     internal static void DrawDungeonBackdrop(Graphics graphics, Rectangle bounds)
     {
-        using var distant = new SolidBrush(Color.FromArgb(49, 57, 87));
-        using var ground = new SolidBrush(Color.FromArgb(43, 35, 55));
-        using var highlight = new Pen(Color.FromArgb(76, 81, 116));
+        var state = graphics.Save();
+        graphics.SetClip(bounds, CombineMode.Intersect);
+        var (distantColor, groundColor, highlightColor) = HudColors.Theme switch
+        {
+            HudTheme.ArcaneGlass => (Color.FromArgb(67, 48, 130), Color.FromArgb(31, 25, 70), Color.FromArgb(112, 86, 190)),
+            HudTheme.GuildLedger => (Color.FromArgb(128, 92, 48), Color.FromArgb(105, 70, 39), Color.FromArgb(190, 148, 88)),
+            HudTheme.CodeTerminal => (Color.FromArgb(12, 53, 28), Color.FromArgb(5, 27, 14), Color.FromArgb(30, 101, 51)),
+            _ => (Color.FromArgb(49, 57, 87), Color.FromArgb(43, 35, 55), Color.FromArgb(76, 81, 116))
+        };
+        using var distant = new SolidBrush(distantColor);
+        using var ground = new SolidBrush(groundColor);
+        using var highlight = new Pen(highlightColor);
         var horizon = bounds.Bottom - Math.Max(17, bounds.Height / 5);
         graphics.FillRectangle(ground, bounds.X, horizon, bounds.Width, bounds.Bottom - horizon);
         for (var x = bounds.X + 5; x < bounds.Right; x += 18)
@@ -324,6 +551,7 @@ internal static class PixelArt
         {
             graphics.DrawLine(highlight, bounds.X, y, bounds.Right, y);
         }
+        graphics.Restore(state);
     }
 
     internal static string FormatNumber(long? value)

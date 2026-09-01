@@ -2,267 +2,249 @@ namespace CodexTokenQuest.Desktop;
 
 internal sealed class UsageWindow : Form
 {
-    private static readonly Size CompactSize = new(362, 284);
-    private static readonly Size FullSize = new(392, 636);
+    private static readonly IReadOnlyDictionary<string, Size> PanelSizes = new Dictionary<string, Size>
+    {
+        ["CAMP"] = new(392, 350), ["QUESTS"] = new(392, 552), ["HISTORY"] = new(392, 382)
+    };
 
-    private readonly Panel _compactPanel;
-    private readonly Panel _fullPanel;
-    private readonly RpgHeroPanel _compactHero;
-    private readonly RpgHeroPanel _fullHero;
-    private readonly RpgStatsPanel _compactStats;
-    private readonly RpgStatsPanel _fullStats;
+    private readonly Panel _campPanel, _questsPanel, _historyPanel;
+    private readonly RpgHeroPanel _hero;
+    private readonly RpgStatsPanel _stats;
     private readonly PixelScrollPanel _quotaCards;
     private readonly DailyUsageChart _dailyChart;
-    private readonly Label _status;
-    private readonly Label _compactReset;
-    private readonly Label _footer;
-    private readonly Button _mode;
-    private readonly Button _refresh;
-    private readonly Button _close;
+    private readonly Label _brand, _questTitle, _status, _compactReset, _footer;
+    private readonly Button _campTab, _questsTab, _historyTab, _theme, _refresh, _close;
     private readonly NotifyIcon _trayIcon;
-    private readonly ToolStripMenuItem _trayMode;
-    private readonly System.Windows.Forms.Timer _hostTimer;
-    private readonly System.Windows.Forms.Timer _countdownTimer;
-    private readonly System.Windows.Forms.Timer _refreshTimer;
+    private readonly System.Windows.Forms.Timer _hostTimer, _countdownTimer, _refreshTimer;
     private readonly CancellationTokenSource _shutdown = new();
-
     private DesktopSettings _settings;
     private CodexAppServerClient? _client;
-    private bool _refreshing;
-    private bool _allowExit;
-    private bool _manuallyHidden;
+    private bool _refreshing, _allowExit, _manuallyHidden;
     private nint _hostWindow;
-    private DateTimeOffset? _codexMissingSince;
-    private DateTimeOffset? _compactResetAt;
+    private DateTimeOffset? _codexMissingSince, _compactResetAt;
+    private DateTimeOffset? _lastFetchedAt;
+    private bool _lastRefreshFailed;
 
     protected override bool ShowWithoutActivation => true;
-
     protected override CreateParams CreateParams
     {
         get
         {
-            const int wsExToolWindow = 0x00000080;
-            const int wsExNoActivate = 0x08000000;
-            var parameters = base.CreateParams;
-            parameters.ExStyle |= wsExToolWindow | wsExNoActivate;
-            return parameters;
+            const int toolWindow = 0x00000080, noActivate = 0x08000000;
+            var value = base.CreateParams;
+            value.ExStyle |= toolWindow | noActivate;
+            return value;
         }
     }
 
     internal UsageWindow()
     {
         _settings = DesktopSettings.Load();
+        HudColors.SetTheme((HudTheme)_settings.ThemeIndex);
         Text = "Codex Token Quest";
-        ClientSize = CompactSize;
+        ClientSize = PanelSizes[_settings.SelectedPanel];
         BackColor = HudColors.Background;
         ForeColor = HudColors.Text;
         Font = new Font("Consolas", 8f, FontStyle.Bold);
         FormBorderStyle = FormBorderStyle.None;
-        MaximizeBox = false;
-        MinimizeBox = false;
-        ShowIcon = false;
-        ShowInTaskbar = false;
+        MaximizeBox = MinimizeBox = ShowIcon = ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
-        TopMost = true;
-        DoubleBuffered = true;
+        TopMost = DoubleBuffered = true;
 
-        var brand = new Label
-        {
-            Text = "◆ CODEX TOKEN QUEST ◆",
-            Font = new Font("Consolas", 9f, FontStyle.Bold),
-            ForeColor = HudColors.Gold,
-            Location = new Point(12, 10),
-            Size = new Size(198, 17)
-        };
-        _status = new Label
-        {
-            Text = "LOADING SAVE DATA...",
-            Font = new Font("Consolas", 6.5f, FontStyle.Bold),
-            ForeColor = HudColors.Muted,
-            Location = new Point(14, 29),
-            Size = new Size(205, 14)
-        };
-        _mode = CreatePixelButton("MAP", HudColors.Cyan, 248, 9, 49);
-        _mode.Click += (_, _) => ToggleMode();
-        _refresh = CreatePixelButton("↻", HudColors.Green, 300, 9, 24);
+        _brand = new Label { Text = "◆ CODEX TOKEN QUEST ◆", Font = new Font("Consolas", 9f, FontStyle.Bold), Location = new(12, 10), Size = new(210, 17) };
+        _status = new Label { Text = "LOADING SAVE DATA...", Font = new Font("Consolas", 6.5f, FontStyle.Bold), Location = new(14, 29), Size = new(215, 14) };
+        _theme = CreateButton("A PIX", 249, 9, 61, 25);
+        _refresh = CreateButton("↻", 315, 9, 28, 25);
+        _close = CreateButton("×", 348, 9, 31, 25);
+        _theme.Click += (_, _) => CycleTheme();
         _refresh.Click += async (_, _) => await RefreshSnapshotAsync();
-        _close = CreatePixelButton("×", HudColors.Red, 327, 9, 24);
-        _close.Click += (_, _) =>
-        {
-            _manuallyHidden = true;
-            Hide();
-        };
+        _close.Click += (_, _) => { _manuallyHidden = true; Hide(); };
 
-        _compactHero = new RpgHeroPanel
-        {
-            CharacterIndex = _settings.CharacterIndex,
-            Location = new Point(0, 0),
-            Size = new Size(136, 174)
-        };
-        _compactStats = new RpgStatsPanel { Location = new Point(142, 0), Size = new Size(198, 174) };
-        _compactPanel = new Panel
-        {
-            BackColor = HudColors.Background,
-            Location = new Point(11, 51),
-            Size = new Size(340, 176)
-        };
-        _compactPanel.Controls.AddRange([_compactHero, _compactStats]);
+        _campTab = CreateButton("CAMP", 11, 51, 116, 29);
+        _questsTab = CreateButton("QUESTS", 132, 51, 116, 29);
+        _historyTab = CreateButton("HISTORY", 253, 51, 128, 29);
+        _campTab.Click += (_, _) => SelectPanel("CAMP");
+        _questsTab.Click += (_, _) => SelectPanel("QUESTS");
+        _historyTab.Click += (_, _) => SelectPanel("HISTORY");
+
+        _hero = new RpgHeroPanel { CharacterIndex = _settings.CharacterIndex, Location = new(0, 0), Size = new(164, 174) };
+        _stats = new RpgStatsPanel { Location = new(170, 0), Size = new(198, 174) };
         _compactReset = new Label
         {
-            Text = "◆ NEXT RESET // UNKNOWN",
-            Font = new Font("Consolas", 6.7f, FontStyle.Bold),
-            ForeColor = HudColors.Cyan,
-            BackColor = HudColors.Panel,
-            BorderStyle = BorderStyle.FixedSingle,
-            TextAlign = ContentAlignment.MiddleLeft,
-            Location = new Point(14, 231),
-            Padding = new Padding(5, 0, 0, 0),
-            Size = new Size(334, 19)
+            Text = "◆ NEXT RESET // UNKNOWN", Font = new Font("Consolas", 7f, FontStyle.Bold),
+            BorderStyle = BorderStyle.FixedSingle, TextAlign = ContentAlignment.MiddleLeft,
+            Location = new(3, 180), Padding = new(7, 0, 0, 0), Size = new(364, 24)
         };
+        _campPanel = new Panel { Location = new(11, 88), Size = new(370, 206) };
+        _campPanel.Controls.AddRange([_hero, _stats, _compactReset]);
 
-        _fullHero = new RpgHeroPanel
+        _questTitle = new Label
         {
-            CharacterIndex = _settings.CharacterIndex,
-            Location = new Point(0, 0),
-            Size = new Size(164, 218)
+            Text = "⚔ STAMINA DUNGEON // WEEKLY LIMITS", Font = new Font("Consolas", 7f, FontStyle.Bold),
+            Location = new(3, 0), Size = new(360, 16)
         };
-        _fullStats = new RpgStatsPanel { Location = new Point(170, 0), Size = new Size(198, 218) };
-        var questTitle = new Label
-        {
-            Text = "⚔ STAMINA DUNGEON // WEEKLY LIMITS",
-            ForeColor = HudColors.Gold,
-            Font = new Font("Consolas", 7f, FontStyle.Bold),
-            Location = new Point(3, 225),
-            Size = new Size(360, 15)
-        };
-        _quotaCards = new PixelScrollPanel
-        {
-            BackColor = HudColors.Background,
-            Location = new Point(3, 244),
-            Size = new Size(365, 174)
-        };
-        _dailyChart = new DailyUsageChart { Location = new Point(3, 425), Size = new Size(365, 112) };
-        _fullPanel = new Panel
-        {
-            BackColor = HudColors.Background,
-            Location = new Point(11, 51),
-            Size = new Size(370, 542)
-        };
-        _fullPanel.Controls.AddRange([_fullHero, _fullStats, questTitle, _quotaCards, _dailyChart]);
+        _quotaCards = new PixelScrollPanel { Location = new(3, 22), Size = new(365, 374) };
+        _questsPanel = new Panel { Location = new(11, 88), Size = new(370, 398) };
+        _questsPanel.Controls.AddRange([_questTitle, _quotaCards]);
 
-        _compactHero.CharacterChanged += (_, index) => SelectCharacter(index);
-        _fullHero.CharacterChanged += (_, index) => SelectCharacter(index);
+        _dailyChart = new DailyUsageChart { Location = new(3, 0), Size = new(365, 238) };
+        _historyPanel = new Panel { Location = new(11, 88), Size = new(370, 238) };
+        _historyPanel.Controls.Add(_dailyChart);
+        _hero.CharacterChanged += (_, index) => SelectCharacter(index);
 
         _footer = new Label
         {
-            Text = "AUTO-SAVE ◆ SYNC 5M ◆ OPTIONS",
-            Cursor = Cursors.Hand,
-            Font = new Font("Consolas", 6.7f, FontStyle.Bold),
-            ForeColor = HudColors.Muted,
-            TextAlign = ContentAlignment.MiddleLeft,
-            Location = new Point(14, 237),
-            Size = new Size(330, 16)
+            Text = "AUTO-SAVE ◆ SYNC 5M ◆ OPTIONS", Cursor = Cursors.Hand,
+            Font = new Font("Consolas", 6.7f, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft,
+            Location = new(14, ClientSize.Height - 28), Size = new(ClientSize.Width - 28, 16)
         };
         _footer.Click += (_, _) => ShowSettings();
+        Controls.AddRange([_brand, _status, _theme, _refresh, _close, _campTab, _questsTab, _historyTab, _campPanel, _questsPanel, _historyPanel, _footer]);
 
-        Controls.AddRange([brand, _status, _mode, _refresh, _close, _compactPanel, _compactReset, _fullPanel, _footer]);
-
-        _trayMode = new ToolStripMenuItem("開啟冒險地圖（完整版）", null, (_, _) => ToggleMode());
         var trayMenu = new ContextMenuStrip();
         trayMenu.Items.Add("顯示 / 隱藏", null, (_, _) => ToggleVisibility());
-        trayMenu.Items.Add(_trayMode);
+        trayMenu.Items.Add("營地", null, (_, _) => SelectPanel("CAMP"));
+        trayMenu.Items.Add("任務額度", null, (_, _) => SelectPanel("QUESTS"));
+        trayMenu.Items.Add("歷史紀錄", null, (_, _) => SelectPanel("HISTORY"));
+        trayMenu.Items.Add("切換介面主題", null, (_, _) => CycleTheme());
         trayMenu.Items.Add("重新讀取冒險紀錄", null, async (_, _) => await RefreshSnapshotAsync());
         trayMenu.Items.Add("遊戲選項", null, (_, _) => ShowSettings());
         trayMenu.Items.Add(new ToolStripSeparator());
         trayMenu.Items.Add("離開遊戲", null, (_, _) => ExitApplication());
-        _trayIcon = new NotifyIcon
-        {
-            Icon = SystemIcons.Application,
-            Text = "Codex Token Quest",
-            ContextMenuStrip = trayMenu,
-            Visible = true
-        };
+        _trayIcon = new NotifyIcon { Icon = SystemIcons.Application, Text = "Codex Token Quest", ContextMenuStrip = trayMenu, Visible = true };
         _trayIcon.DoubleClick += (_, _) => ToggleVisibility();
 
-        _hostTimer = new System.Windows.Forms.Timer { Interval = 500, Enabled = true };
+        _hostTimer = new() { Interval = 500, Enabled = true };
         _hostTimer.Tick += (_, _) => TrackHostWindow();
-        _countdownTimer = new System.Windows.Forms.Timer { Interval = 1000, Enabled = true };
+        _countdownTimer = new() { Interval = 1000, Enabled = true };
         _countdownTimer.Tick += (_, _) => UpdateCountdowns();
-        _refreshTimer = new System.Windows.Forms.Timer();
+        _refreshTimer = new();
         _refreshTimer.Tick += async (_, _) => await RefreshSnapshotAsync();
-
-        ApplyMode();
+        ApplyTheme();
+        ApplyPanel();
         ApplyRefreshInterval();
-        Shown += async (_, _) =>
-        {
-            TrackHostWindow();
-            await RefreshSnapshotAsync();
-        };
+        Shown += async (_, _) => { TrackHostWindow(); await RefreshSnapshotAsync(); };
     }
 
-    private static Button CreatePixelButton(string text, Color accent, int x, int y, int width)
+    private static Button CreateButton(string text, int x, int y, int width, int height)
     {
         var button = new Button
         {
-            Text = text,
-            Font = new Font("Consolas", 7f, FontStyle.Bold),
-            ForeColor = accent,
-            BackColor = HudColors.Panel,
-            FlatStyle = FlatStyle.Flat,
-            TabStop = false,
-            Location = new Point(x, y),
-            Size = new Size(width, 25),
-            Cursor = Cursors.Hand
+            Text = text, Font = new Font("Consolas", 7f, FontStyle.Bold), FlatStyle = FlatStyle.Flat,
+            TabStop = false, Location = new(x, y), Size = new(width, height), Cursor = Cursors.Hand
         };
-        button.FlatAppearance.BorderColor = accent;
         button.FlatAppearance.BorderSize = 2;
-        button.FlatAppearance.MouseOverBackColor = HudColors.PanelBright;
         return button;
     }
 
-    private void ApplyMode()
+    private void SelectPanel(string panel)
+    {
+        if (!PanelSizes.ContainsKey(panel)) return;
+        _settings = _settings with { SelectedPanel = panel };
+        _settings.Save();
+        ApplyPanel();
+    }
+
+    private void ApplyPanel()
     {
         SuspendLayout();
-        ClientSize = _settings.CompactMode ? CompactSize : FullSize;
-        _compactPanel.Visible = _settings.CompactMode;
-        _compactReset.Visible = _settings.CompactMode;
-        _fullPanel.Visible = !_settings.CompactMode;
-        _mode.Text = _settings.CompactMode ? "MAP" : "CAMP";
-        _trayMode.Text = _settings.CompactMode ? "開啟冒險地圖（完整版）" : "返回營地（精簡版）";
-        _mode.Location = new Point(ClientSize.Width - 114, 9);
-        _refresh.Location = new Point(ClientSize.Width - 62, 9);
-        _close.Location = new Point(ClientSize.Width - 35, 9);
-        _footer.Location = new Point(14, ClientSize.Height - 28);
-        _footer.Size = new Size(ClientSize.Width - 28, 16);
+        _campPanel.Visible = _settings.SelectedPanel == "CAMP";
+        _questsPanel.Visible = _settings.SelectedPanel == "QUESTS";
+        _historyPanel.Visible = _settings.SelectedPanel == "HISTORY";
+        ClientSize = PanelSizes[_settings.SelectedPanel];
+        _footer.Location = new(14, ClientSize.Height - 28);
+        _footer.Size = new(ClientSize.Width - 28, 16);
+        StyleNavigation();
         ResumeLayout(true);
         TrackHostWindow();
         Invalidate();
     }
 
-    private void ToggleMode()
+    private void CycleTheme()
     {
-        _settings = _settings with { CompactMode = !_settings.CompactMode };
+        var next = (_settings.ThemeIndex + 1) % Enum.GetValues<HudTheme>().Length;
+        _settings = _settings with { ThemeIndex = next };
         _settings.Save();
-        ApplyMode();
+        HudColors.SetTheme((HudTheme)next);
+        ApplyTheme();
+    }
+
+    private void ApplyTheme()
+    {
+        BackColor = HudColors.Background;
+        ForeColor = HudColors.Text;
+        var tabs = HudCopy.Tabs;
+        _brand.Text = HudCopy.Brand;
+        _campTab.Text = tabs.Camp;
+        _questsTab.Text = tabs.Quests;
+        _historyTab.Text = tabs.History;
+        _questTitle.Text = HudCopy.QuestTitle;
+        _footer.Text = HudCopy.Footer(_settings.RefreshMinutes);
+        _status.Text = _refreshing
+            ? HudCopy.Loading
+            : _lastRefreshFailed
+                ? HudCopy.Lost
+                : _lastFetchedAt is not null
+                    ? HudCopy.Ready(_lastFetchedAt.Value)
+                    : HudCopy.Loading;
+        _brand.ForeColor = HudColors.Gold;
+        _status.ForeColor = _refreshing ? HudColors.Amber : HudColors.Green;
+        _questTitle.ForeColor = HudColors.Gold;
+        _footer.ForeColor = HudColors.Muted;
+        _compactReset.BackColor = HudColors.Panel;
+        _compactReset.ForeColor = HudColors.Cyan;
+        RefreshThemeTree(this);
+        _theme.Text = HudColors.Theme switch
+        {
+            HudTheme.PixelDungeon => "A PIX", HudTheme.ArcaneGlass => "B GLS",
+            HudTheme.GuildLedger => "C GUILD", _ => "D TERM"
+        };
+        StyleNavigation();
+        Invalidate(true);
+    }
+
+    private static void RefreshThemeTree(Control root)
+    {
+        foreach (Control control in root.Controls)
+        {
+            if (control is Panel or PixelScrollPanel) control.BackColor = HudColors.Background;
+            else if (control is RpgHeroPanel or RpgStatsPanel or QuotaCard or DailyUsageChart) control.BackColor = HudColors.Panel;
+            control.Invalidate();
+            if (control.HasChildren) RefreshThemeTree(control);
+        }
+    }
+
+    private void StyleNavigation()
+    {
+        StyleButton(_campTab, _settings.SelectedPanel == "CAMP" ? HudColors.Gold : HudColors.Grid);
+        StyleButton(_questsTab, _settings.SelectedPanel == "QUESTS" ? HudColors.Gold : HudColors.Grid);
+        StyleButton(_historyTab, _settings.SelectedPanel == "HISTORY" ? HudColors.Gold : HudColors.Grid);
+        StyleButton(_theme, HudColors.Cyan);
+        StyleButton(_refresh, HudColors.Green);
+        StyleButton(_close, HudColors.Red);
+    }
+
+    private static void StyleButton(Button button, Color accent)
+    {
+        button.ForeColor = accent;
+        button.BackColor = HudColors.Panel;
+        button.FlatAppearance.BorderColor = accent;
+        button.FlatAppearance.MouseOverBackColor = HudColors.PanelBright;
+        button.FlatAppearance.MouseDownBackColor = HudColors.Ink;
     }
 
     private void SelectCharacter(int index)
     {
         _settings = _settings with { CharacterIndex = index };
         _settings.Save();
-        _compactHero.CharacterIndex = index;
-        _fullHero.CharacterIndex = index;
+        _hero.CharacterIndex = index;
     }
 
     private async Task RefreshSnapshotAsync()
     {
-        if (_refreshing || _shutdown.IsCancellationRequested)
-        {
-            return;
-        }
-
+        if (_refreshing || _shutdown.IsCancellationRequested) return;
         _refreshing = true;
-        _status.Text = "READING QUEST LOG...";
+        _status.Text = HudCopy.Loading;
         _status.ForeColor = HudColors.Amber;
         _refresh.Enabled = false;
         try
@@ -270,22 +252,14 @@ internal sealed class UsageWindow : Form
             _client ??= await CodexAppServerClient.StartAsync(_shutdown.Token);
             var snapshot = await _client.ReadSnapshotAsync(_shutdown.Token);
             RenderSnapshot(snapshot);
-            _status.Text = $"SAVE OK ◆ {snapshot.FetchedAt.ToLocalTime():HH:mm:ss}";
+            _lastFetchedAt = snapshot.FetchedAt.ToLocalTime();
+            _lastRefreshFailed = false;
+            _status.Text = HudCopy.Ready(_lastFetchedAt.Value);
             _status.ForeColor = HudColors.Green;
         }
-        catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            await ResetClientAsync();
-            RenderError(exception.Message);
-        }
-        finally
-        {
-            _refreshing = false;
-            _refresh.Enabled = true;
-        }
+        catch (OperationCanceledException) when (_shutdown.IsCancellationRequested) { }
+        catch (Exception exception) { await ResetClientAsync(); RenderError(exception.Message); }
+        finally { _refreshing = false; _refresh.Enabled = true; }
     }
 
     private void RenderSnapshot(UsageSnapshot snapshot)
@@ -293,69 +267,51 @@ internal sealed class UsageWindow : Form
         var weekly = snapshot.RateLimits
             .Where(bucket => bucket.WindowDurationMinutes >= 7 * 24 * 60)
             .OrderBy(bucket => bucket.Id.Equals("codex", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-            .ThenBy(bucket => bucket.Name ?? bucket.Id, StringComparer.CurrentCultureIgnoreCase)
-            .FirstOrDefault()
+            .ThenBy(bucket => bucket.Name ?? bucket.Id, StringComparer.CurrentCultureIgnoreCase).FirstOrDefault()
             ?? snapshot.RateLimits.OrderByDescending(bucket => bucket.WindowDurationMinutes ?? 0).FirstOrDefault();
         var stamina = weekly?.RemainingPercent;
         var today = DateOnly.FromDateTime(DateTime.Today);
-        var apiTodayTokens = snapshot.DailyUsage.FirstOrDefault(item => item.Date == today)?.Tokens;
-        var localTodayTokens = LocalTokenUsageReader.ReadForDate(today);
-        long? todayTokens = apiTodayTokens is not null && localTodayTokens is not null
-            ? Math.Max(apiTodayTokens.Value, localTodayTokens.Value)
-            : apiTodayTokens ?? localTodayTokens;
+        var apiToday = snapshot.DailyUsage.FirstOrDefault(item => item.Date == today)?.Tokens;
+        var localToday = LocalTokenUsageReader.ReadForDate(today);
+        long? todayTokens = apiToday is not null && localToday is not null ? Math.Max(apiToday.Value, localToday.Value) : apiToday ?? localToday;
         var lifetime = snapshot.Tokens?.LifetimeTokens;
         var level = RpgProgress.GetLevel(Math.Max(0, lifetime ?? 0));
-
         var selected = Math.Clamp(_settings.CharacterIndex, 0, RpgHeroPanel.Characters.Count - 1);
         if (RpgHeroPanel.Characters[selected].UnlockLevel > level)
         {
-            selected = RpgHeroPanel.Characters
-                .Select((character, index) => (character, index))
-                .Where(item => item.character.UnlockLevel <= level)
-                .Select(item => item.index)
-                .LastOrDefault();
+            selected = RpgHeroPanel.Characters.Select((character, index) => (character, index))
+                .Where(item => item.character.UnlockLevel <= level).Select(item => item.index).LastOrDefault();
             SelectCharacter(selected);
         }
-        _compactHero.Level = level;
-        _fullHero.Level = level;
-        _compactHero.CharacterIndex = selected;
-        _fullHero.CharacterIndex = selected;
-        _compactStats.SetStats(lifetime, todayTokens, stamina);
-        _fullStats.SetStats(lifetime, todayTokens, stamina);
+        _hero.Level = level;
+        _hero.CharacterIndex = selected;
+        _stats.SetStats(lifetime, todayTokens, stamina);
         _compactResetAt = weekly?.ResetsAt;
         UpdateCompactReset(DateTimeOffset.Now);
 
         _quotaCards.SuspendLayout();
         _quotaCards.Controls.Clear();
-        foreach (var bucket in snapshot.RateLimits
-                     .OrderBy(item => item.Id.Equals("codex", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+        foreach (var bucket in snapshot.RateLimits.OrderBy(item => item.Id.Equals("codex", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
                      .ThenByDescending(item => item.WindowDurationMinutes ?? 0))
-        {
             _quotaCards.Controls.Add(new QuotaCard(bucket));
-        }
         _quotaCards.ResumeLayout();
 
         var chartUsage = snapshot.DailyUsage.Where(item => item.Date != today).ToList();
-        if (todayTokens is not null)
-        {
-            chartUsage.Add(new DailyTokenUsage(today, todayTokens.Value));
-        }
+        if (todayTokens is not null) chartUsage.Add(new(today, todayTokens.Value));
         _dailyChart.SetData(chartUsage);
         var hero = RpgHeroPanel.Characters[selected];
-        _trayIcon.Text = stamina is null
-            ? $"{hero.Name} ◆ LV.{level}"
-            : $"{hero.Name} ◆ LV.{level} ◆ STA {stamina:0.#}";
+        _trayIcon.Text = stamina is null ? $"{hero.Name} ◆ LV.{level}" : $"{hero.Name} ◆ LV.{level} ◆ STA {stamina:0.#}";
     }
 
     private void RenderError(string message)
     {
-        _compactStats.SetStats(null, null, null);
-        _fullStats.SetStats(null, null, null);
+        _stats.SetStats(null, null, null);
+        _lastRefreshFailed = true;
         _quotaCards.Controls.Clear();
         _dailyChart.SetData([]);
         _compactResetAt = null;
         UpdateCompactReset(DateTimeOffset.Now);
-        _status.Text = "QUEST LOG LOST ◆ RETRY";
+        _status.Text = HudCopy.Lost;
         _status.ForeColor = HudColors.Red;
         _trayIcon.Text = "Codex Token Quest：讀取失敗";
         _trayIcon.BalloonTipTitle = "冒險紀錄讀取失敗";
@@ -366,10 +322,7 @@ internal sealed class UsageWindow : Form
     private void UpdateCountdowns()
     {
         var now = DateTimeOffset.Now;
-        foreach (var card in _quotaCards.Controls.OfType<QuotaCard>())
-        {
-            card.UpdateCountdown(now);
-        }
+        foreach (var card in _quotaCards.Controls.OfType<QuotaCard>()) card.UpdateCountdown(now);
         UpdateCompactReset(now);
     }
 
@@ -377,15 +330,14 @@ internal sealed class UsageWindow : Form
     {
         if (_compactResetAt is null)
         {
-            _compactReset.Text = "◆ NEXT RESET // UNKNOWN";
+            _compactReset.Text = $"◆ NEXT {HudCopy.Reset} // UNKNOWN";
             _compactReset.ForeColor = HudColors.Muted;
             return;
         }
-
         var local = _compactResetAt.Value.ToLocalTime();
         var remaining = local - now;
         var countdown = remaining <= TimeSpan.Zero ? "SYNCING" : QuotaCard.FormatDuration(remaining);
-        _compactReset.Text = $"◆ NEXT RESET // {local:MM/dd HH:mm} // {countdown}";
+        _compactReset.Text = $"◆ NEXT {HudCopy.Reset} // {local:MM/dd HH:mm} // {countdown}";
         _compactReset.ForeColor = remaining <= TimeSpan.FromHours(12) ? HudColors.Amber : HudColors.Cyan;
     }
 
@@ -393,17 +345,13 @@ internal sealed class UsageWindow : Form
     {
         _refreshTimer.Interval = checked(_settings.RefreshMinutes * 60 * 1000);
         _refreshTimer.Start();
-        _footer.Text = $"AUTO-SAVE ◆ SYNC {_settings.RefreshMinutes}M ◆ OPTIONS";
+        _footer.Text = HudCopy.Footer(_settings.RefreshMinutes);
     }
 
     private void ShowSettings()
     {
         using var form = new SettingsForm(_settings.RefreshMinutes);
-        if (form.ShowDialog(this) != DialogResult.OK)
-        {
-            return;
-        }
-
+        if (form.ShowDialog(this) != DialogResult.OK) return;
         _settings = _settings with { RefreshMinutes = form.RefreshMinutes };
         _settings.Save();
         ApplyRefreshInterval();
@@ -414,70 +362,31 @@ internal sealed class UsageWindow : Form
         _hostWindow = NativeMethods.FindCodexWindow();
         if (_hostWindow == 0 || !NativeMethods.GetWindowRect(_hostWindow, out var host))
         {
-            if (Visible)
-            {
-                Hide();
-            }
-
-            if (NativeMethods.IsCodexRunning())
-            {
-                _codexMissingSince = null;
-                return;
-            }
-
+            if (Visible) Hide();
+            if (NativeMethods.IsCodexRunning()) { _codexMissingSince = null; return; }
             _codexMissingSince ??= DateTimeOffset.Now;
-            if (DateTimeOffset.Now - _codexMissingSince >= TimeSpan.FromSeconds(5))
-            {
-                ExitApplication();
-            }
+            if (DateTimeOffset.Now - _codexMissingSince >= TimeSpan.FromSeconds(5)) ExitApplication();
             return;
         }
-
         _codexMissingSince = null;
-
-        var targetSize = _settings.CompactMode ? CompactSize : FullSize;
+        var target = PanelSizes[_settings.SelectedPanel];
         const int margin = 12;
-        var hostWidth = host.Right - host.Left;
-        var hostHeight = host.Bottom - host.Top;
-        var desiredWidth = Math.Min(targetSize.Width, Math.Max(280, hostWidth - margin * 2));
-        var desiredHeight = Math.Min(targetSize.Height, Math.Max(210, hostHeight - margin * 2));
-        if (Size != new Size(desiredWidth, desiredHeight))
-        {
-            Size = new Size(desiredWidth, desiredHeight);
-        }
-        Location = new Point(host.Right - Width - margin, host.Bottom - Height - margin);
-        if (!Visible && !_manuallyHidden)
-        {
-            Show();
-        }
+        var width = Math.Min(target.Width, Math.Max(280, host.Right - host.Left - margin * 2));
+        var height = Math.Min(target.Height, Math.Max(210, host.Bottom - host.Top - margin * 2));
+        if (Size != new Size(width, height)) Size = new(width, height);
+        Location = new(host.Right - Width - margin, host.Bottom - Height - margin);
+        if (!Visible && !_manuallyHidden) Show();
     }
 
     private void ToggleVisibility()
     {
-        if (Visible)
-        {
-            _manuallyHidden = true;
-            Hide();
-        }
-        else
-        {
-            _manuallyHidden = false;
-            TrackHostWindow();
-        }
+        if (Visible) { _manuallyHidden = true; Hide(); }
+        else { _manuallyHidden = false; TrackHostWindow(); }
     }
-
-    private void ExitApplication()
-    {
-        _allowExit = true;
-        Close();
-    }
-
+    private void ExitApplication() { _allowExit = true; Close(); }
     private async Task ResetClientAsync()
     {
-        if (_client is null)
-        {
-            return;
-        }
+        if (_client is null) return;
         var client = _client;
         _client = null;
         await client.DisposeAsync();
@@ -489,6 +398,7 @@ internal sealed class UsageWindow : Form
         PixelArt.DrawPanel(eventArgs.Graphics, ClientRectangle, HudColors.Gold);
         using var line = new Pen(HudColors.Grid);
         eventArgs.Graphics.DrawLine(line, 9, 46, ClientSize.Width - 10, 46);
+        eventArgs.Graphics.DrawLine(line, 9, 84, ClientSize.Width - 10, 84);
     }
 
     protected override void OnFormClosing(FormClosingEventArgs eventArgs)
@@ -500,7 +410,6 @@ internal sealed class UsageWindow : Form
             Hide();
             return;
         }
-
         _shutdown.Cancel();
         _hostTimer.Stop();
         _countdownTimer.Stop();
@@ -518,11 +427,7 @@ internal sealed class UsageWindow : Form
             _countdownTimer.Dispose();
             _refreshTimer.Dispose();
             _trayIcon.Dispose();
-            if (_client is not null)
-            {
-                _client.DisposeAsync().AsTask().GetAwaiter().GetResult();
-                _client = null;
-            }
+            if (_client is not null) { _client.DisposeAsync().AsTask().GetAwaiter().GetResult(); _client = null; }
             _shutdown.Dispose();
         }
         base.Dispose(disposing);
