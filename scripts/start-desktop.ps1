@@ -1,6 +1,6 @@
 $pluginRoot = Split-Path -Parent $PSScriptRoot
 $projectPath = Join-Path $pluginRoot 'src\CodexTokenQuest.Desktop\CodexTokenQuest.Desktop.csproj'
-$assemblyPath = Join-Path $pluginRoot 'src\CodexTokenQuest.Desktop\bin\Release\net8.0-windows\CodexTokenQuest.Desktop.exe'
+$assemblyPath = Join-Path $pluginRoot 'src\CodexTokenQuest.Desktop\bin\Release\net10.0-windows\CodexTokenQuest.Desktop.exe'
 $stateDirectory = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'CodexTokenQuest'
 $logPath = Join-Path $stateDirectory 'lifecycle.log'
 

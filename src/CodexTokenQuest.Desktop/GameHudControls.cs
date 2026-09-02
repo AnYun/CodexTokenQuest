@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Drawing.Drawing2D;
 using System.Globalization;
 
@@ -257,6 +258,7 @@ internal sealed class RpgHeroPanel : Control
 
     internal event EventHandler<int>? CharacterChanged;
 
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     internal int CharacterIndex
     {
         get => _characterIndex;
@@ -267,6 +269,7 @@ internal sealed class RpgHeroPanel : Control
         }
     }
 
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     internal int Level
     {
         get => _level;

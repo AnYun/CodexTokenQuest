@@ -13,7 +13,7 @@ No ChatGPT access token or API key is read or stored by this project.
 
 ## Requirements
 
-- .NET 8 SDK or newer
+- .NET 10 SDK or newer
 - Codex CLI available as `codex`
 - Codex CLI signed in with a ChatGPT-backed account
 

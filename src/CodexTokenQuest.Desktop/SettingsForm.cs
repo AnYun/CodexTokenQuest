@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Drawing.Drawing2D;
 
 namespace CodexTokenQuest.Desktop;
@@ -258,6 +259,7 @@ internal sealed class PixelScaleBar : Control
 
     internal event EventHandler? ValueChanged;
 
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     internal int Value
     {
         get => _value;
@@ -348,6 +350,7 @@ internal sealed class PixelNumberDisplay : Control
 {
     private int _minutes;
 
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     internal int Minutes
     {
         get => _minutes;
