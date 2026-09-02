@@ -402,7 +402,7 @@ internal sealed class UsageWindow : Form
         var localToday = LocalTokenUsageReader.ReadForDate(today);
         long? todayTokens = apiToday is not null && localToday is not null ? Math.Max(apiToday.Value, localToday.Value) : apiToday ?? localToday;
         var lifetime = snapshot.Tokens?.LifetimeTokens;
-        var level = RpgProgress.GetLevel(Math.Max(0, lifetime ?? 0));
+        var level = ExperienceProgress.GetLevel(Math.Max(0, lifetime ?? 0), _settings.ExperienceBase);
         var selected = Math.Clamp(_settings.CharacterIndex, 0, RpgHeroPanel.Characters.Count - 1);
         if (RpgHeroPanel.Characters[selected].UnlockLevel > level)
         {
@@ -412,7 +412,7 @@ internal sealed class UsageWindow : Form
         }
         _hero.Level = level;
         _hero.CharacterIndex = selected;
-        _stats.SetStats(lifetime, todayTokens, stamina);
+        _stats.SetStats(lifetime, todayTokens, stamina, _settings.ExperienceBase);
         _compactResetAt = weekly?.ResetsAt;
         UpdateCompactReset(DateTimeOffset.Now);
 
@@ -434,7 +434,7 @@ internal sealed class UsageWindow : Form
 
     private void RenderError(string message)
     {
-        _stats.SetStats(null, null, null);
+        _stats.SetStats(null, null, null, _settings.ExperienceBase);
         _lastRefreshFailed = true;
         _quotaCards.Controls.Clear();
         _dailyChart.SetData([]);
@@ -479,16 +479,18 @@ internal sealed class UsageWindow : Form
 
     private void ShowSettings()
     {
-        using var form = new SettingsForm(_settings.RefreshMinutes, _settings.HudScalePercent, _settings.Margin, _settings.Language);
+        using var form = new SettingsForm(_settings.RefreshMinutes, _settings.HudScalePercent, _settings.Margin, _settings.ExperienceBase, _settings.Language);
         if (form.ShowDialog(this) != DialogResult.OK) return;
         var sizeChanged = _settings.HudScalePercent != form.HudScalePercent;
         var marginChanged = _settings.Margin != form.HudMargin;
+        var experienceBaseChanged = _settings.ExperienceBase != form.ExperienceBase;
         var languageChanged = _settings.Language != form.Language;
         _settings = _settings with
         {
             RefreshMinutes = form.RefreshMinutes,
             HudScalePercent = form.HudScalePercent,
             Margin = form.HudMargin,
+            ExperienceBase = form.ExperienceBase,
             Language = form.Language
         };
         _settings.Save();
@@ -508,6 +510,10 @@ internal sealed class UsageWindow : Form
         {
             UiText.SetLanguage(_settings.Language);
             ApplyLanguage();
+        }
+        if (experienceBaseChanged)
+        {
+            _ = RefreshSnapshotAsync();
         }
     }
 

@@ -212,46 +212,6 @@ internal static class HudCopy
 
 internal sealed record RpgCharacter(string Name, string ClassName, int UnlockLevel, int Column, int Row);
 
-internal static class RpgProgress
-{
-    internal const int MaximumLevel = 99;
-
-    internal static int GetLevel(long tokens)
-    {
-        if (tokens <= 0)
-        {
-            return 1;
-        }
-
-        return Math.Clamp(1 + (int)Math.Floor(10d * Math.Log10(tokens / 1000d + 1d)), 1, MaximumLevel);
-    }
-
-    internal static long GetThreshold(int level)
-    {
-        if (level <= 1)
-        {
-            return 0;
-        }
-
-        var threshold = 1000d * (Math.Pow(10d, (level - 1) / 10d) - 1d);
-        return threshold >= long.MaxValue ? long.MaxValue : (long)Math.Round(threshold);
-    }
-
-    internal static decimal GetLevelProgress(long tokens, int level)
-    {
-        if (level >= MaximumLevel)
-        {
-            return 100m;
-        }
-
-        var current = GetThreshold(level);
-        var next = GetThreshold(level + 1);
-        return next <= current
-            ? 100m
-            : Math.Clamp((decimal)(tokens - current) / (next - current) * 100m, 0m, 100m);
-    }
-}
-
 internal sealed class RpgHeroPanel : Control
 {
     internal static readonly IReadOnlyList<RpgCharacter> Characters =
@@ -283,7 +243,7 @@ internal sealed class RpgHeroPanel : Control
     internal int Level
     {
         get => _level;
-        set { _level = Math.Clamp(value, 1, RpgProgress.MaximumLevel); Invalidate(); }
+        set { _level = Math.Clamp(value, 1, ExperienceProgress.MaximumLevel); Invalidate(); }
     }
 
     internal RpgHeroPanel()
@@ -401,12 +361,14 @@ internal sealed class RpgStatsPanel : Control
     private long? _lifetimeTokens;
     private long? _todayTokens;
     private decimal? _staminaPercent;
+    private long _experienceBase = DesktopSettings.DefaultExperienceBase;
 
-    internal void SetStats(long? lifetimeTokens, long? todayTokens, decimal? staminaPercent)
+    internal void SetStats(long? lifetimeTokens, long? todayTokens, decimal? staminaPercent, long experienceBase)
     {
         _lifetimeTokens = lifetimeTokens;
         _todayTokens = todayTokens;
         _staminaPercent = staminaPercent;
+        _experienceBase = experienceBase;
         Invalidate();
     }
 
@@ -428,8 +390,8 @@ internal sealed class RpgStatsPanel : Control
         PixelArt.DrawPanel(graphics, new Rectangle(0, 0, width, height), HudColors.Cyan);
 
         var tokens = Math.Max(0, _lifetimeTokens ?? 0);
-        var level = RpgProgress.GetLevel(tokens);
-        var progress = RpgProgress.GetLevelProgress(tokens, level);
+        var level = ExperienceProgress.GetLevel(tokens, _experienceBase);
+        var progress = ExperienceProgress.GetLevelProgress(tokens, level, _experienceBase);
         using var levelFont = PixelArt.CreateMainFont(height >= 195 ? 14f : 12f);
         using var labelFont = PixelArt.CreateMainFont(7f);
         using var valueFont = PixelArt.CreateMainFont(height >= 195 ? 9f : 8f);

@@ -47,6 +47,15 @@ Assert(rateLimits.Count == 2, "Primary and secondary windows should be parsed.")
 Assert(dailyUsage.Count == 1, "Daily token usage should be parsed.");
 Assert(credits == 1, "Available reset credits should be parsed.");
 
+var experienceProgress = assembly.GetType("CodexTokenQuest.Core.ExperienceProgress", throwOnError: true)!;
+var getLevel = experienceProgress.GetMethod("GetLevel", BindingFlags.NonPublic | BindingFlags.Static)!;
+var getThreshold = experienceProgress.GetMethod("GetThreshold", BindingFlags.NonPublic | BindingFlags.Static)!;
+var fastLevel = (int)getLevel.Invoke(null, [1_000_000_000_000L, 1_000L])!;
+var slowLevel = (int)getLevel.Invoke(null, [1_000_000_000_000L, 1_000_000_000L])!;
+var levelTenThreshold = (long)getThreshold.Invoke(null, [10, 1_000_000L])!;
+Assert(fastLevel > slowLevel, "A higher experience base should slow level progression.");
+Assert(levelTenThreshold > 0, "Experience thresholds should remain positive above level one.");
+
 var localReader = assembly.GetType("CodexTokenQuest.Core.LocalTokenUsageReader", throwOnError: true)!;
 var tryReadIncrement = localReader.GetMethod("TryReadIncrement", BindingFlags.NonPublic | BindingFlags.Static)!;
 var localToday = DateOnly.FromDateTime(DateTime.Today);
@@ -65,7 +74,7 @@ var arguments = new object?[] { tokenEvent, localToday, 0L };
 var parsedLocalTokens = (bool)tryReadIncrement.Invoke(null, arguments)!;
 Assert(parsedLocalTokens && (long)arguments[2]! == 24680L, "Today's local session token increment should be parsed.");
 
-Console.WriteLine("All usage parser tests passed.");
+Console.WriteLine("All Codex Token Quest tests passed.");
 return 0;
 
 static void Assert(bool condition, string message)

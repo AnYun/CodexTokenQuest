@@ -9,26 +9,30 @@ internal sealed class SettingsForm : Form
     private readonly PixelScaleBar _scaleBar;
     private readonly Label _scaleValue;
     private readonly Label _marginValue;
+    private readonly Label _experienceBaseValue;
     private int _refreshMinutes;
     private int _hudScalePercent;
     private int _margin;
+    private long _experienceBase;
     private string _language;
 
     internal int RefreshMinutes => _refreshMinutes;
     internal int HudScalePercent => _hudScalePercent;
     internal int HudMargin => _margin;
+    internal long ExperienceBase => _experienceBase;
     internal string Language => _language;
 
-    internal SettingsForm(int currentMinutes, int currentHudScalePercent, int currentMargin, string currentLanguage)
+    internal SettingsForm(int currentMinutes, int currentHudScalePercent, int currentMargin, long currentExperienceBase, string currentLanguage)
     {
         _refreshMinutes = Math.Clamp(currentMinutes, DesktopSettings.MinimumRefreshMinutes, DesktopSettings.MaximumRefreshMinutes);
         _hudScalePercent = Math.Clamp(currentHudScalePercent, DesktopSettings.MinimumHudScalePercent, DesktopSettings.MaximumHudScalePercent);
         _margin = Math.Clamp(currentMargin, DesktopSettings.MinimumMargin, DesktopSettings.MaximumMargin);
+        _experienceBase = Math.Clamp(currentExperienceBase, DesktopSettings.MinimumExperienceBase, DesktopSettings.MaximumExperienceBase);
         _language = UiText.NormalizeLanguage(currentLanguage);
 
         Text = $"{UiText.WindowTitle} - {UiText.Pick("Options", "選項")}";
         AutoScaleMode = AutoScaleMode.None;
-        ClientSize = new Size(HudScale.Px(360), HudScale.Px(360));
+        ClientSize = new Size(HudScale.Px(360), HudScale.Px(450));
         BackColor = HudColors.Background;
         ForeColor = HudColors.Text;
         Font = PixelArt.CreateHudFont(8f);
@@ -102,13 +106,14 @@ internal sealed class SettingsForm : Form
             Location = new Point(HudScale.Px(20), HudScale.Px(148)),
             Size = new Size(HudScale.Px(120), HudScale.Px(15))
         };
+        var quickButtons = new List<Button>();
         var quickValues = new[] { 1, 5, 15, 60 };
         for (var index = 0; index < quickValues.Length; index++)
         {
             var value = quickValues[index];
             var quick = CreatePixelButton($"{value}M", HudColors.Green, 20 + index * 81, 166, 74, 31);
             quick.Click += (_, _) => SetMinutes(value);
-            Controls.Add(quick);
+            quickButtons.Add(quick);
         }
 
         var sizeSection = new Label
@@ -173,14 +178,74 @@ internal sealed class SettingsForm : Form
         marginMinus.Click += (_, _) => AdjustMargin(-1);
         marginPlus.Click += (_, _) => AdjustMargin(1);
 
-        var cancel = CreatePixelButton(UiText.Cancel, HudColors.Red, 176, 316, 78, 28);
+        var experienceSection = new Label
+        {
+            Text = UiText.ExperienceBase,
+            Font = PixelArt.CreateHudFont(8.5f),
+            ForeColor = HudColors.Cyan,
+            BackColor = Color.Transparent,
+            Location = new Point(HudScale.Px(20), HudScale.Px(318)),
+            Size = new Size(HudScale.Px(200), HudScale.Px(18))
+        };
+        var experienceDescription = new Label
+        {
+            Text = UiText.ExperienceBaseDescription,
+            ForeColor = HudColors.Muted,
+            BackColor = Color.Transparent,
+            Location = new Point(HudScale.Px(20), HudScale.Px(337)),
+            Size = new Size(HudScale.Px(320), HudScale.Px(17))
+        };
+        var experienceDivide = CreatePixelButton("/10", HudColors.Cyan, 20, 358, 55, 31);
+        _experienceBaseValue = new Label
+        {
+            Text = FormatExperienceBase(),
+            Font = PixelArt.CreateHudFont(8f),
+            ForeColor = HudColors.Gold,
+            BackColor = HudColors.Panel,
+            BorderStyle = BorderStyle.FixedSingle,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Location = new Point(HudScale.Px(79), HudScale.Px(358)),
+            Size = new Size(HudScale.Px(178), HudScale.Px(31))
+        };
+        var experienceMultiply = CreatePixelButton("X10", HudColors.Cyan, 261, 358, 79, 31);
+        experienceDivide.Click += (_, _) => AdjustExperienceBase(-1);
+        experienceMultiply.Click += (_, _) => AdjustExperienceBase(1);
+
+        var content = new Panel
+        {
+            Location = new Point(HudScale.Px(17), HudScale.Px(50)),
+            Size = new Size(HudScale.Px(326), HudScale.Px(347)),
+            BackColor = HudColors.Background
+        };
+        var settingsContent = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = HudColors.Background
+        };
+        var settingsControls = new List<Control>
+        {
+            section, description, minusFive, minusOne, _minutesDisplay, plusOne, plusFive, quickLabel,
+            sizeSection, sizeDescription, _scaleBar, _scaleValue, marginSection, marginMinus, _marginValue,
+            marginPlus, experienceSection, experienceDescription, experienceDivide, _experienceBaseValue,
+            experienceMultiply
+        };
+        settingsControls.AddRange(quickButtons);
+        foreach (var control in settingsControls)
+        {
+            control.Left -= HudScale.Px(17);
+            control.Top -= HudScale.Px(50);
+            settingsContent.Controls.Add(control);
+        }
+        content.Controls.Add(settingsContent);
+
+        var cancel = CreatePixelButton(UiText.Cancel, HudColors.Red, 176, 406, 78, 28);
         cancel.DialogResult = DialogResult.Cancel;
-        var save = CreatePixelButton(UiText.Save, HudColors.Green, 264, 316, 78, 28);
+        var save = CreatePixelButton(UiText.Save, HudColors.Green, 264, 406, 78, 28);
         save.DialogResult = DialogResult.OK;
 
         AcceptButton = save;
         CancelButton = cancel;
-        Controls.AddRange([title, language, close, section, description, minusFive, minusOne, _minutesDisplay, plusOne, plusFive, quickLabel, sizeSection, sizeDescription, _scaleBar, _scaleValue, marginSection, marginMinus, _marginValue, marginPlus, cancel, save]);
+        Controls.AddRange([title, language, close, content, cancel, save]);
 
         Shown += (_, _) =>
         {
@@ -200,8 +265,7 @@ internal sealed class SettingsForm : Form
         PixelArt.DrawPanel(eventArgs.Graphics, new Rectangle(0, 0, width, height), HudColors.Gold);
         using var divider = new Pen(HudColors.Grid, 2f);
         eventArgs.Graphics.DrawLine(divider, 18, 45, width - 18, 45);
-        eventArgs.Graphics.DrawLine(divider, 18, 199, width - 18, 199);
-        eventArgs.Graphics.DrawLine(divider, 18, 312, width - 18, 312);
+        eventArgs.Graphics.DrawLine(divider, 18, 402, width - 18, 402);
         eventArgs.Graphics.Restore(state);
     }
 
@@ -239,6 +303,16 @@ internal sealed class SettingsForm : Form
         _margin = Math.Clamp(_margin + delta, DesktopSettings.MinimumMargin, DesktopSettings.MaximumMargin);
         _marginValue.Text = $"{_margin} PX";
     }
+
+    private void AdjustExperienceBase(int direction)
+    {
+        _experienceBase = direction < 0
+            ? Math.Max(DesktopSettings.MinimumExperienceBase, _experienceBase / 10)
+            : Math.Min(DesktopSettings.MaximumExperienceBase, _experienceBase * 10);
+        _experienceBaseValue.Text = FormatExperienceBase();
+    }
+
+    private string FormatExperienceBase() => $"{PixelArt.FormatNumber(_experienceBase)} {UiText.Tokens}";
 
     private static Button CreatePixelButton(string text, Color accent, int x, int y, int width, int height)
     {

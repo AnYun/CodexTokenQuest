@@ -41,7 +41,7 @@ The companion is a standalone Windows UI and does not install a Codex skill or M
 - hides while the desktop host is closed, minimized, switched to ChatGPT mode, or behind another application, then returns when Codex mode is in the foreground again;
 - follows Codex when it moves or resizes;
 - provides a pixel-art RPG camp with a hero portrait, level, EXP, today's quest EXP, and weekly stamina;
-- turns lifetime tokens into exponential RPG experience levels from 1 to 99;
+- turns lifetime tokens into exponential RPG experience levels from 1 to 99, with a configurable EXP base (`1K`–`1T`) for pacing;
 - includes four selectable pixel heroes unlocked at levels 1, 10, 25, and 50, and remembers the selected hero;
 - separates the HUD into remembered `CAMP`, `QUESTS`, and `HISTORY` panels for character progress, stamina modules, and the seven-day quest EXP chart;
 - includes four persistent visual themes—Pixel Dungeon, Arcane Glass, Guild Ledger, and Code Terminal—cycled from the style control;

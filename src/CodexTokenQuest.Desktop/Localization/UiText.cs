@@ -38,6 +38,11 @@ internal static class UiText
         "Drag to resize the interface (50%–300%)",
         "拖曳調整介面大小（50%–300%）");
     internal static string HudMargin => Pick("HUD MARGIN", "視窗邊距");
+    internal static string ExperienceBase => Pick("EXP BASE", "經驗值基數");
+    internal static string ExperienceBaseDescription => Pick(
+        "Higher values slow down level progression",
+        "數值越高，等級提升速度越慢");
+    internal static string Tokens => Pick("TOKENS", "TOKEN");
     internal static string Cancel => Pick("CANCEL", "取消");
     internal static string Save => Pick("SAVE", "儲存");
     internal static string LanguageButton(string language) =>
