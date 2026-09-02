@@ -5,6 +5,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <ApplicationIcon>..\..\assets\icons\tray-icon.ico</ApplicationIcon>
     <AssemblyName>CodexTokenQuest.Desktop</AssemblyName>
     <RootNamespace>CodexTokenQuest.Desktop</RootNamespace>
   </PropertyGroup>

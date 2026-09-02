@@ -16,6 +16,7 @@ internal sealed class UsageWindow : Form
     private readonly DailyUsageChart _dailyChart;
     private readonly Label _brand, _questTitle, _status, _compactReset, _footer;
     private readonly Button _campTab, _questsTab, _historyTab, _theme, _refresh, _close;
+    private readonly Icon? _applicationIcon;
     private readonly NotifyIcon _trayIcon;
     private readonly System.Windows.Forms.Timer _hostTimer, _countdownTimer, _refreshTimer;
     private readonly CancellationTokenSource _shutdown = new();
@@ -119,7 +120,8 @@ internal sealed class UsageWindow : Form
         trayMenu.Items.Add("遊戲選項", null, (_, _) => ShowSettings());
         trayMenu.Items.Add(new ToolStripSeparator());
         trayMenu.Items.Add("離開遊戲", null, (_, _) => ExitApplication());
-        _trayIcon = new NotifyIcon { Icon = SystemIcons.Application, Text = "Codex Token Quest", ContextMenuStrip = trayMenu, Visible = true };
+        _applicationIcon = TryLoadApplicationIcon();
+        _trayIcon = new NotifyIcon { Icon = _applicationIcon ?? SystemIcons.Application, Text = "Codex Token Quest", ContextMenuStrip = trayMenu, Visible = true };
         _trayIcon.DoubleClick += (_, _) => ToggleVisibility();
 
         _hostTimer = new() { Interval = 500, Enabled = true };
@@ -143,6 +145,18 @@ internal sealed class UsageWindow : Form
         };
         button.FlatAppearance.BorderSize = HudScale.Px(2);
         return button;
+    }
+
+    private static Icon? TryLoadApplicationIcon()
+    {
+        try
+        {
+            return Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+        }
+        catch (Exception exception) when (exception is ArgumentException or FileNotFoundException)
+        {
+            return null;
+        }
     }
 
     private void SelectPanel(string panel)
@@ -562,6 +576,7 @@ internal sealed class UsageWindow : Form
             _countdownTimer.Dispose();
             _refreshTimer.Dispose();
             _trayIcon.Dispose();
+            _applicationIcon?.Dispose();
             if (_client is not null) { _client.DisposeAsync().AsTask().GetAwaiter().GetResult(); _client = null; }
             _shutdown.Dispose();
         }
