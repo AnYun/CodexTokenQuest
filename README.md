@@ -47,6 +47,7 @@ The companion is a standalone Windows UI and does not install a Codex skill or M
 - includes four persistent visual themes—Pixel Dungeon, Arcane Glass, Guild Ledger, and Code Terminal—cycled from the style control;
 - supports persistent English and Traditional Chinese window text, selectable from the game options;
 - provides a persistent HUD opacity setting from 20% to 100%;
+- includes a remembered compact view that keeps only the title, stamina bar, reset time, and options footer;
 - refreshes account usage every 5 minutes by default and reset countdowns every second;
 - lets you set a persistent 1–1440 minute refresh interval from the notification-area menu or the update text at the bottom of the window;
 - stays available from the Windows notification area.

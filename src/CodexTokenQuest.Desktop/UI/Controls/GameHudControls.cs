@@ -423,6 +423,42 @@ internal sealed class RpgStatsPanel : Control
     }
 }
 
+internal sealed class CompactStaminaBar : Control
+{
+    private decimal? _staminaPercent;
+
+    internal CompactStaminaBar()
+    {
+        DoubleBuffered = true;
+        BackColor = HudColors.Panel;
+    }
+
+    internal void SetStamina(decimal? staminaPercent)
+    {
+        _staminaPercent = staminaPercent;
+        Invalidate();
+    }
+
+    protected override void OnPaint(PaintEventArgs eventArgs)
+    {
+        base.OnPaint(eventArgs);
+        var graphics = eventArgs.Graphics;
+        var state = graphics.Save();
+        graphics.ScaleTransform((float)HudScale.Factor, (float)HudScale.Factor);
+        var width = HudScale.Logical(Width);
+        var height = HudScale.Logical(Height);
+        graphics.SmoothingMode = SmoothingMode.None;
+        PixelArt.DrawPanel(graphics, new Rectangle(0, 0, width, height), HudColors.Green);
+
+        var stamina = Math.Clamp(_staminaPercent ?? 0m, 0m, 100m);
+        using var font = PixelArt.CreateMainFont(7f);
+        PixelArt.DrawText(graphics, HudCopy.Stamina, font, new Rectangle(11, 7, width / 2, 13), HudColors.Text, TextFormatFlags.Left | TextFormatFlags.NoPadding);
+        PixelArt.DrawText(graphics, $"{stamina:0.#} / 100", font, new Rectangle(width / 2, 7, width / 2 - 11, 13), HudColors.Cream, TextFormatFlags.Right | TextFormatFlags.NoPadding);
+        PixelArt.DrawBar(graphics, new Rectangle(11, Math.Max(22, height - 18), width - 22, 10), stamina, HudColors.Green);
+        graphics.Restore(state);
+    }
+}
+
 internal sealed class DailyUsageChart : Control
 {
     private IReadOnlyList<DailyTokenUsage> _usage = [];

@@ -47,6 +47,8 @@ internal static class UiText
     internal static string HudOpacityDescription => Pick(
         "Adjust HUD visibility (20%–100%)",
         "調整介面可見度（20%–100%）");
+    internal static string MinimizeHud => Pick("Compact view", "精簡模式");
+    internal static string RestoreHud => Pick("Restore full view", "還原完整模式");
     internal static string Cancel => Pick("CANCEL", "取消");
     internal static string Save => Pick("SAVE", "儲存");
     internal static string LanguageButton(string language) =>

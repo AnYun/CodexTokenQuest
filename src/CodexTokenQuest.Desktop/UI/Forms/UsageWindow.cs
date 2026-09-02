@@ -8,14 +8,16 @@ internal sealed class UsageWindow : Form
     {
         ["CAMP"] = new(392, 350), ["QUESTS"] = new(392, 382), ["HISTORY"] = new(392, 382)
     };
+    private static readonly Size MinimizedSize = new(392, 160);
 
-    private readonly Panel _campPanel, _questsPanel, _historyPanel;
+    private readonly Panel _campPanel, _questsPanel, _historyPanel, _minimizedPanel;
     private readonly RpgHeroPanel _hero;
     private readonly RpgStatsPanel _stats;
+    private readonly CompactStaminaBar _minimizedStamina;
     private readonly PixelScrollPanel _quotaCards;
     private readonly DailyUsageChart _dailyChart;
-    private readonly Label _brand, _questTitle, _status, _compactReset, _footer;
-    private readonly Button _campTab, _questsTab, _historyTab, _theme, _refresh, _close;
+    private readonly Label _brand, _questTitle, _status, _compactReset, _minimizedReset, _footer;
+    private readonly Button _campTab, _questsTab, _historyTab, _theme, _minimize, _refresh, _close;
     private readonly Icon? _applicationIcon;
     private readonly ContextMenuStrip _trayMenu;
     private readonly NotifyIcon _trayIcon;
@@ -64,9 +66,11 @@ internal sealed class UsageWindow : Form
         _brand = new Label { Text = "◆ CODEX TOKEN QUEST ◆", Font = PixelArt.CreateMainHudFont(9f), Location = new(12, 10), Size = new(210, 17) };
         _status = new Label { Text = "LOADING SAVE DATA...", Font = PixelArt.CreateMainHudFont(6.5f), Location = new(14, 29), Size = new(215, 14) };
         _theme = CreateButton("A PIX", 249, 9, 61, 25);
+        _minimize = CreateButton("—", 216, 9, 28, 25);
         _refresh = CreateButton("↻", 315, 9, 28, 25);
         _close = CreateButton("×", 348, 9, 31, 25);
         _theme.Click += (_, _) => CycleTheme();
+        _minimize.Click += (_, _) => ToggleMinimizedMode();
         _refresh.Click += async (_, _) => await RefreshSnapshotAsync();
         _close.Click += (_, _) => { _manuallyHidden = true; Hide(); };
 
@@ -87,6 +91,16 @@ internal sealed class UsageWindow : Form
         };
         _campPanel = new Panel { Location = new(11, 88), Size = new(370, 206) };
         _campPanel.Controls.AddRange([_hero, _stats, _compactReset]);
+
+        _minimizedStamina = new CompactStaminaBar { Location = new(3, 0), Size = new(364, 44) };
+        _minimizedReset = new Label
+        {
+            Text = "◆ NEXT RESET // UNKNOWN", Font = PixelArt.CreateMainHudFont(7f),
+            BorderStyle = BorderStyle.FixedSingle, TextAlign = ContentAlignment.MiddleLeft,
+            Padding = new(HudScale.Px(7), 0, 0, 0), Size = new(364, 24)
+        };
+        _minimizedPanel = new Panel { Location = new(11, 51), Size = new(370, 78) };
+        _minimizedPanel.Controls.AddRange([_minimizedStamina, _minimizedReset]);
 
         _questTitle = new Label
         {
@@ -109,7 +123,7 @@ internal sealed class UsageWindow : Form
             Location = new(14, ClientSize.Height - 28), Size = new(ClientSize.Width - 28, 16)
         };
         _footer.Click += (_, _) => ShowSettings();
-        Controls.AddRange([_brand, _status, _theme, _refresh, _close, _campTab, _questsTab, _historyTab, _campPanel, _questsPanel, _historyPanel, _footer]);
+        Controls.AddRange([_brand, _status, _theme, _minimize, _refresh, _close, _campTab, _questsTab, _historyTab, _campPanel, _questsPanel, _historyPanel, _minimizedPanel, _footer]);
         Resize += (_, _) => LayoutResponsiveControls();
         LayoutResponsiveControls();
 
@@ -172,6 +186,7 @@ internal sealed class UsageWindow : Form
     {
         Text = UiText.WindowTitle;
         BuildTrayMenu();
+        _minimize.AccessibleName = _settings.MinimizedMode ? UiText.RestoreHud : UiText.MinimizeHud;
         ApplyTheme();
         UpdateCountdowns();
     }
@@ -179,17 +194,30 @@ internal sealed class UsageWindow : Form
     private void SelectPanel(string panel)
     {
         if (!PanelSizes.ContainsKey(panel)) return;
-        _settings = _settings with { SelectedPanel = panel };
+        _settings = _settings with { SelectedPanel = panel, MinimizedMode = false };
         _settings.Save();
+        ApplyPanel();
+    }
+
+    private void ToggleMinimizedMode()
+    {
+        _settings = _settings with { MinimizedMode = !_settings.MinimizedMode };
+        _settings.Save();
+        _lastPlacement = null;
         ApplyPanel();
     }
 
     private void ApplyPanel()
     {
         SuspendLayout();
-        _campPanel.Visible = _settings.SelectedPanel == "CAMP";
-        _questsPanel.Visible = _settings.SelectedPanel == "QUESTS";
-        _historyPanel.Visible = _settings.SelectedPanel == "HISTORY";
+        var minimized = _settings.MinimizedMode;
+        _campTab.Visible = _questsTab.Visible = _historyTab.Visible = !minimized;
+        _campPanel.Visible = !minimized && _settings.SelectedPanel == "CAMP";
+        _questsPanel.Visible = !minimized && _settings.SelectedPanel == "QUESTS";
+        _historyPanel.Visible = !minimized && _settings.SelectedPanel == "HISTORY";
+        _minimizedPanel.Visible = minimized;
+        _minimize.Text = minimized ? "□" : "—";
+        _minimize.AccessibleName = minimized ? UiText.RestoreHud : UiText.MinimizeHud;
         ClientSize = GetPanelSize(_settings.SelectedPanel);
         LayoutResponsiveControls();
         StyleNavigation();
@@ -205,8 +233,9 @@ internal sealed class UsageWindow : Form
             return;
         }
 
+        var minimized = _settings.MinimizedMode;
         var outerMargin = HudScale.Px(11);
-        var contentTop = HudScale.Px(88);
+        var contentTop = HudScale.Px(minimized ? 51 : 88);
         var footerHeight = HudScale.Px(16);
         var footerBottom = HudScale.Px(12);
         var contentFooterGap = HudScale.Px(8);
@@ -218,7 +247,8 @@ internal sealed class UsageWindow : Form
         // whatever space remains on narrow Codex windows.
         _close.SetBounds(clientWidth - HudScale.Px(44), HudScale.Px(9), HudScale.Px(31), HudScale.Px(25));
         _refresh.SetBounds(_close.Left - HudScale.Px(33), HudScale.Px(9), HudScale.Px(28), HudScale.Px(25));
-        _theme.SetBounds(_refresh.Left - HudScale.Px(66), HudScale.Px(9), HudScale.Px(61), HudScale.Px(25));
+        _minimize.SetBounds(_refresh.Left - HudScale.Px(33), HudScale.Px(9), HudScale.Px(28), HudScale.Px(25));
+        _theme.SetBounds(_minimize.Left - HudScale.Px(66), HudScale.Px(9), HudScale.Px(61), HudScale.Px(25));
         var headingWidth = Math.Max(HudScale.Px(70), _theme.Left - HudScale.Px(18));
         _brand.SetBounds(HudScale.Px(12), HudScale.Px(10), headingWidth, HudScale.Px(17));
         _status.SetBounds(HudScale.Px(14), HudScale.Px(29), headingWidth, HudScale.Px(14));
@@ -238,13 +268,22 @@ internal sealed class UsageWindow : Form
         _footer.SetBounds(HudScale.Px(14), footerTop, Math.Max(1, clientWidth - HudScale.Px(28)), footerHeight);
         var contentWidth = Math.Max(1, clientWidth - outerMargin * 2);
         var contentHeight = Math.Max(1, footerTop - contentFooterGap - contentTop);
+        var innerWidth = Math.Max(1, contentWidth - HudScale.Px(6));
+        var resetHeight = Math.Min(HudScale.Px(24), Math.Max(1, contentHeight));
+        var resetTop = Math.Max(0, contentHeight - resetHeight);
+
+        _minimizedPanel.SetBounds(outerMargin, contentTop, contentWidth, contentHeight);
+        _minimizedStamina.SetBounds(HudScale.Px(3), 0, innerWidth, Math.Max(1, resetTop - HudScale.Px(6)));
+        _minimizedReset.SetBounds(HudScale.Px(3), resetTop, innerWidth, resetHeight);
+        if (minimized)
+        {
+            return;
+        }
+
         _campPanel.SetBounds(outerMargin, contentTop, contentWidth, contentHeight);
         _questsPanel.SetBounds(outerMargin, contentTop, contentWidth, contentHeight);
         _historyPanel.SetBounds(outerMargin, contentTop, contentWidth, contentHeight);
 
-        var innerWidth = Math.Max(1, contentWidth - HudScale.Px(6));
-        var resetHeight = Math.Min(HudScale.Px(24), Math.Max(1, contentHeight));
-        var resetTop = Math.Max(0, contentHeight - resetHeight);
         var heroHeight = Math.Max(1, resetTop - HudScale.Px(6));
         var heroWidth = Math.Max(1, (innerWidth - HudScale.Px(6)) * 45 / 100);
         _hero.SetBounds(HudScale.Px(3), 0, heroWidth, heroHeight);
@@ -258,7 +297,7 @@ internal sealed class UsageWindow : Form
 
     private Size GetPanelSize(string panel)
     {
-        var baseSize = PanelSizes[panel];
+        var baseSize = _settings.MinimizedMode ? MinimizedSize : PanelSizes[panel];
         var scale = _settings.HudScalePercent / 100d;
         return new Size(
             (int)Math.Round(baseSize.Width * scale),
@@ -272,9 +311,11 @@ internal sealed class UsageWindow : Form
         _status.Font = PixelArt.CreateMainHudFont(6.5f);
         _compactReset.Font = PixelArt.CreateMainHudFont(7f);
         _compactReset.Padding = new Padding(HudScale.Px(7), 0, 0, 0);
+        _minimizedReset.Font = PixelArt.CreateMainHudFont(7f);
+        _minimizedReset.Padding = new Padding(HudScale.Px(7), 0, 0, 0);
         _questTitle.Font = PixelArt.CreateMainHudFont(7f);
         _footer.Font = PixelArt.CreateMainHudFont(6.7f);
-        foreach (var button in new[] { _campTab, _questsTab, _historyTab, _theme, _refresh, _close })
+        foreach (var button in new[] { _campTab, _questsTab, _historyTab, _theme, _minimize, _refresh, _close })
         {
             button.Font = PixelArt.CreateMainHudFont(7f);
             button.FlatAppearance.BorderSize = HudScale.Px(2);
@@ -321,6 +362,8 @@ internal sealed class UsageWindow : Form
         _footer.ForeColor = HudColors.Muted;
         _compactReset.BackColor = HudColors.Panel;
         _compactReset.ForeColor = HudColors.Cyan;
+        _minimizedReset.BackColor = HudColors.Panel;
+        _minimizedReset.ForeColor = HudColors.Cyan;
         RefreshThemeTree(this);
         _theme.Text = HudColors.Theme switch
         {
@@ -336,7 +379,7 @@ internal sealed class UsageWindow : Form
         foreach (Control control in root.Controls)
         {
             if (control is Panel or PixelScrollPanel) control.BackColor = HudColors.Background;
-            else if (control is RpgHeroPanel or RpgStatsPanel or QuotaCard or DailyUsageChart) control.BackColor = HudColors.Panel;
+            else if (control is RpgHeroPanel or RpgStatsPanel or CompactStaminaBar or QuotaCard or DailyUsageChart) control.BackColor = HudColors.Panel;
             control.Invalidate();
             if (control.HasChildren) RefreshThemeTree(control);
         }
@@ -348,6 +391,7 @@ internal sealed class UsageWindow : Form
         StyleButton(_questsTab, _settings.SelectedPanel == "QUESTS" ? HudColors.Gold : HudColors.Grid);
         StyleButton(_historyTab, _settings.SelectedPanel == "HISTORY" ? HudColors.Gold : HudColors.Grid);
         StyleButton(_theme, HudColors.Cyan);
+        StyleButton(_minimize, HudColors.Amber);
         StyleButton(_refresh, HudColors.Green);
         StyleButton(_close, HudColors.Red);
     }
@@ -414,6 +458,7 @@ internal sealed class UsageWindow : Form
         _hero.Level = level;
         _hero.CharacterIndex = selected;
         _stats.SetStats(lifetime, todayTokens, stamina, _settings.ExperienceBase);
+        _minimizedStamina.SetStamina(stamina);
         _compactResetAt = weekly?.ResetsAt;
         UpdateCompactReset(DateTimeOffset.Now);
 
@@ -436,6 +481,7 @@ internal sealed class UsageWindow : Form
     private void RenderError(string message)
     {
         _stats.SetStats(null, null, null, _settings.ExperienceBase);
+        _minimizedStamina.SetStamina(null);
         _lastRefreshFailed = true;
         _quotaCards.Controls.Clear();
         _dailyChart.SetData([]);
@@ -460,15 +506,21 @@ internal sealed class UsageWindow : Form
     {
         if (_compactResetAt is null)
         {
-            _compactReset.Text = $"◆ {UiText.Next} {HudCopy.Reset} // {UiText.Unknown}";
-            _compactReset.ForeColor = HudColors.Muted;
+            SetResetLabels($"◆ {UiText.Next} {HudCopy.Reset} // {UiText.Unknown}", HudColors.Muted);
             return;
         }
         var local = _compactResetAt.Value.ToLocalTime();
         var remaining = local - now;
         var countdown = remaining <= TimeSpan.Zero ? UiText.Syncing : QuotaCard.FormatDuration(remaining);
-        _compactReset.Text = $"◆ {UiText.Next} {HudCopy.Reset} // {local:MM/dd HH:mm} // {countdown}";
-        _compactReset.ForeColor = remaining <= TimeSpan.FromHours(12) ? HudColors.Amber : HudColors.Cyan;
+        SetResetLabels(
+            $"◆ {UiText.Next} {HudCopy.Reset} // {local:MM/dd HH:mm} // {countdown}",
+            remaining <= TimeSpan.FromHours(12) ? HudColors.Amber : HudColors.Cyan);
+    }
+
+    private void SetResetLabels(string text, Color color)
+    {
+        _compactReset.Text = _minimizedReset.Text = text;
+        _compactReset.ForeColor = _minimizedReset.ForeColor = color;
     }
 
     private void ApplyRefreshInterval()
@@ -545,7 +597,8 @@ internal sealed class UsageWindow : Form
         var target = GetPanelSize(_settings.SelectedPanel);
         var margin = _settings.Margin;
         var width = Math.Min(target.Width, Math.Max(HudScale.Px(280), host.Right - host.Left - margin * 2));
-        var height = Math.Min(target.Height, Math.Max(HudScale.Px(210), host.Bottom - host.Top - margin * 2));
+        var minimumHeight = HudScale.Px(_settings.MinimizedMode ? 150 : 210);
+        var height = Math.Min(target.Height, Math.Max(minimumHeight, host.Bottom - host.Top - margin * 2));
         var placement = new HudPlacement(
             hostWindow,
             host.Right - width - margin,
@@ -584,7 +637,10 @@ internal sealed class UsageWindow : Form
         PixelArt.DrawPanel(eventArgs.Graphics, new Rectangle(0, 0, width, height), HudColors.Gold);
         using var line = new Pen(HudColors.Grid);
         eventArgs.Graphics.DrawLine(line, 9, 46, width - 10, 46);
-        eventArgs.Graphics.DrawLine(line, 9, 84, width - 10, 84);
+        if (!_settings.MinimizedMode)
+        {
+            eventArgs.Graphics.DrawLine(line, 9, 84, width - 10, 84);
+        }
         eventArgs.Graphics.Restore(state);
     }
 

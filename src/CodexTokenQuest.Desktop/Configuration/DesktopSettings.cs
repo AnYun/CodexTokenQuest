@@ -26,7 +26,7 @@ internal sealed record DesktopSettings
     public long ExperienceBase { get; init; } = DefaultExperienceBase;
     public int OpacityPercent { get; init; } = DefaultOpacityPercent;
     public string Language { get; init; } = UiText.DefaultLanguage;
-    public bool CompactMode { get; init; } = true;
+    public bool MinimizedMode { get; init; }
     public int CharacterIndex { get; init; }
     public int ThemeIndex { get; init; }
     public string SelectedPanel { get; init; } = "CAMP";
