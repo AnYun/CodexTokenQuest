@@ -7,16 +7,20 @@ internal sealed class SettingsForm : Form
     private readonly PixelNumberDisplay _minutesDisplay;
     private readonly PixelScaleBar _scaleBar;
     private readonly Label _scaleValue;
+    private readonly Label _marginValue;
     private int _refreshMinutes;
     private int _hudScalePercent;
+    private int _margin;
 
     internal int RefreshMinutes => _refreshMinutes;
     internal int HudScalePercent => _hudScalePercent;
+    internal int HudMargin => _margin;
 
-    internal SettingsForm(int currentMinutes, int currentHudScalePercent)
+    internal SettingsForm(int currentMinutes, int currentHudScalePercent, int currentMargin)
     {
         _refreshMinutes = Math.Clamp(currentMinutes, DesktopSettings.MinimumRefreshMinutes, DesktopSettings.MaximumRefreshMinutes);
         _hudScalePercent = Math.Clamp(currentHudScalePercent, DesktopSettings.MinimumHudScalePercent, DesktopSettings.MaximumHudScalePercent);
+        _margin = Math.Clamp(currentMargin, DesktopSettings.MinimumMargin, DesktopSettings.MaximumMargin);
 
         Text = "Codex Token Quest Options";
         AutoScaleMode = AutoScaleMode.None;
@@ -102,7 +106,7 @@ internal sealed class SettingsForm : Form
             Font = PixelArt.CreateHudFont(8.5f),
             ForeColor = HudColors.Cyan,
             BackColor = Color.Transparent,
-            Location = new Point(HudScale.Px(20), HudScale.Px(219)),
+            Location = new Point(HudScale.Px(20), HudScale.Px(207)),
             Size = new Size(HudScale.Px(120), HudScale.Px(18))
         };
         var sizeDescription = new Label
@@ -110,13 +114,13 @@ internal sealed class SettingsForm : Form
             Text = "拖曳調整介面大小（50%–300%）",
             ForeColor = HudColors.Muted,
             BackColor = Color.Transparent,
-            Location = new Point(HudScale.Px(20), HudScale.Px(238)),
+            Location = new Point(HudScale.Px(20), HudScale.Px(226)),
             Size = new Size(HudScale.Px(320), HudScale.Px(17))
         };
         _scaleBar = new PixelScaleBar
         {
-            Location = new Point(HudScale.Px(20), HudScale.Px(262)),
-            Size = new Size(HudScale.Px(242), HudScale.Px(31)),
+            Location = new Point(HudScale.Px(20), HudScale.Px(246)),
+            Size = new Size(HudScale.Px(242), HudScale.Px(27)),
             Value = _hudScalePercent
         };
         _scaleValue = new Label
@@ -127,10 +131,36 @@ internal sealed class SettingsForm : Form
             BackColor = HudColors.Panel,
             BorderStyle = BorderStyle.FixedSingle,
             TextAlign = ContentAlignment.MiddleCenter,
-            Location = new Point(HudScale.Px(270), HudScale.Px(262)),
-            Size = new Size(HudScale.Px(70), HudScale.Px(31))
+            Location = new Point(HudScale.Px(270), HudScale.Px(246)),
+            Size = new Size(HudScale.Px(70), HudScale.Px(27))
         };
         _scaleBar.ValueChanged += (_, _) => SetHudScale(_scaleBar.Value);
+
+        var marginSection = new Label
+        {
+            Text = "HUD MARGIN",
+            Font = PixelArt.CreateHudFont(8f),
+            ForeColor = HudColors.Cyan,
+            BackColor = Color.Transparent,
+            Location = new Point(HudScale.Px(20), HudScale.Px(283)),
+            Size = new Size(HudScale.Px(142), HudScale.Px(20)),
+            TextAlign = ContentAlignment.MiddleLeft
+        };
+        var marginMinus = CreatePixelButton("-", HudColors.Cyan, 174, 278, 34, 29);
+        _marginValue = new Label
+        {
+            Text = $"{_margin} PX",
+            Font = PixelArt.CreateHudFont(8f),
+            ForeColor = HudColors.Gold,
+            BackColor = HudColors.Panel,
+            BorderStyle = BorderStyle.FixedSingle,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Location = new Point(HudScale.Px(212), HudScale.Px(278)),
+            Size = new Size(HudScale.Px(86), HudScale.Px(29))
+        };
+        var marginPlus = CreatePixelButton("+", HudColors.Cyan, 302, 278, 38, 29);
+        marginMinus.Click += (_, _) => AdjustMargin(-1);
+        marginPlus.Click += (_, _) => AdjustMargin(1);
 
         var cancel = CreatePixelButton("CANCEL", HudColors.Red, 176, 316, 78, 28);
         cancel.DialogResult = DialogResult.Cancel;
@@ -139,7 +169,7 @@ internal sealed class SettingsForm : Form
 
         AcceptButton = save;
         CancelButton = cancel;
-        Controls.AddRange([title, close, section, description, minusFive, minusOne, _minutesDisplay, plusOne, plusFive, quickLabel, sizeSection, sizeDescription, _scaleBar, _scaleValue, cancel, save]);
+        Controls.AddRange([title, close, section, description, minusFive, minusOne, _minutesDisplay, plusOne, plusFive, quickLabel, sizeSection, sizeDescription, _scaleBar, _scaleValue, marginSection, marginMinus, _marginValue, marginPlus, cancel, save]);
 
         Shown += (_, _) =>
         {
@@ -159,8 +189,8 @@ internal sealed class SettingsForm : Form
         PixelArt.DrawPanel(eventArgs.Graphics, new Rectangle(0, 0, width, height), HudColors.Gold);
         using var divider = new Pen(HudColors.Grid, 2f);
         eventArgs.Graphics.DrawLine(divider, 18, 45, width - 18, 45);
-        eventArgs.Graphics.DrawLine(divider, 18, 207, width - 18, 207);
-        eventArgs.Graphics.DrawLine(divider, 18, 306, width - 18, 306);
+        eventArgs.Graphics.DrawLine(divider, 18, 199, width - 18, 199);
+        eventArgs.Graphics.DrawLine(divider, 18, 312, width - 18, 312);
         eventArgs.Graphics.Restore(state);
     }
 
@@ -191,6 +221,12 @@ internal sealed class SettingsForm : Form
     {
         _hudScalePercent = Math.Clamp(percent, DesktopSettings.MinimumHudScalePercent, DesktopSettings.MaximumHudScalePercent);
         _scaleValue.Text = $"{_hudScalePercent}%";
+    }
+
+    private void AdjustMargin(int delta)
+    {
+        _margin = Math.Clamp(_margin + delta, DesktopSettings.MinimumMargin, DesktopSettings.MaximumMargin);
+        _marginValue.Text = $"{_margin} PX";
     }
 
     private static Button CreatePixelButton(string text, Color accent, int x, int y, int width, int height)

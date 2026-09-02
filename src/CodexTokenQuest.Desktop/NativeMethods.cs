@@ -8,6 +8,7 @@ namespace CodexTokenQuest.Desktop;
 internal static class NativeMethods
 {
     private const int GwlHwndParent = -8;
+    private const int DwmwaExtendedFrameBounds = 9;
     private const int MinimumHostWidth = 640;
     private const int MinimumHostHeight = 480;
     private static AutomationElement? _modeButton;
@@ -33,6 +34,28 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool GetWindowRect(nint window, out WindowRect rectangle);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmGetWindowAttribute(
+        nint window,
+        int attribute,
+        out WindowRect value,
+        int valueSize);
+
+    internal static bool TryGetVisibleWindowRect(nint window, out WindowRect rectangle)
+    {
+        var result = DwmGetWindowAttribute(
+            window,
+            DwmwaExtendedFrameBounds,
+            out rectangle,
+            Marshal.SizeOf<WindowRect>());
+        if (result == 0 && rectangle.Right > rectangle.Left && rectangle.Bottom > rectangle.Top)
+        {
+            return true;
+        }
+
+        return GetWindowRect(window, out rectangle);
+    }
 
     [DllImport("user32.dll")]
     internal static extern uint GetWindowThreadProcessId(nint window, out uint processId);
@@ -67,7 +90,7 @@ internal static class NativeMethods
             {
                 using var process = Process.GetProcessById((int)processId);
                 var processName = process.ProcessName;
-                if (!GetWindowRect(window, out var hostBounds))
+                if (!TryGetVisibleWindowRect(window, out var hostBounds))
                 {
                     return true;
                 }

@@ -447,13 +447,15 @@ internal sealed class UsageWindow : Form
 
     private void ShowSettings()
     {
-        using var form = new SettingsForm(_settings.RefreshMinutes, _settings.HudScalePercent);
+        using var form = new SettingsForm(_settings.RefreshMinutes, _settings.HudScalePercent, _settings.Margin);
         if (form.ShowDialog(this) != DialogResult.OK) return;
         var sizeChanged = _settings.HudScalePercent != form.HudScalePercent;
+        var marginChanged = _settings.Margin != form.HudMargin;
         _settings = _settings with
         {
             RefreshMinutes = form.RefreshMinutes,
-            HudScalePercent = form.HudScalePercent
+            HudScalePercent = form.HudScalePercent,
+            Margin = form.HudMargin
         };
         _settings.Save();
         ApplyRefreshInterval();
@@ -463,12 +465,17 @@ internal sealed class UsageWindow : Form
             ApplyHudScale();
             ApplyPanel();
         }
+        if (marginChanged)
+        {
+            _lastPlacement = null;
+            TrackHostWindow();
+        }
     }
 
     private void TrackHostWindow()
     {
         var hostWindow = NativeMethods.FindCodexWindow(_hostWindow);
-        if (hostWindow == 0 || !NativeMethods.GetWindowRect(hostWindow, out var host))
+        if (hostWindow == 0 || !NativeMethods.TryGetVisibleWindowRect(hostWindow, out var host))
         {
             _lastPlacement = null;
             if (Visible) Hide();
@@ -484,7 +491,7 @@ internal sealed class UsageWindow : Form
         }
         _codexMissingSince = null;
         var target = GetPanelSize(_settings.SelectedPanel);
-        var margin = HudScale.Px(12);
+        var margin = _settings.Margin;
         var width = Math.Min(target.Width, Math.Max(HudScale.Px(280), host.Right - host.Left - margin * 2));
         var height = Math.Min(target.Height, Math.Max(HudScale.Px(210), host.Bottom - host.Top - margin * 2));
         var placement = new HudPlacement(
