@@ -462,6 +462,7 @@ internal sealed class CompactStaminaBar : Control
 internal sealed class DailyUsageChart : Control
 {
     private IReadOnlyList<DailyTokenUsage> _usage = [];
+    private int _hoveredIndex = -1;
 
     internal DailyUsageChart()
     {
@@ -472,6 +473,32 @@ internal sealed class DailyUsageChart : Control
     internal void SetData(IReadOnlyList<DailyTokenUsage> usage)
     {
         _usage = usage.OrderBy(item => item.Date).TakeLast(7).ToArray();
+        _hoveredIndex = -1;
+        Invalidate();
+    }
+
+    protected override void OnMouseMove(MouseEventArgs eventArgs)
+    {
+        base.OnMouseMove(eventArgs);
+        var hoveredIndex = HitTestBar(eventArgs.Location);
+        if (_hoveredIndex == hoveredIndex)
+        {
+            return;
+        }
+
+        _hoveredIndex = hoveredIndex;
+        Invalidate();
+    }
+
+    protected override void OnMouseLeave(EventArgs eventArgs)
+    {
+        base.OnMouseLeave(eventArgs);
+        if (_hoveredIndex < 0)
+        {
+            return;
+        }
+
+        _hoveredIndex = -1;
         Invalidate();
     }
 
@@ -502,14 +529,78 @@ internal sealed class DailyUsageChart : Control
         for (var index = 0; index < 7; index++)
         {
             DailyTokenUsage? item = index < _usage.Count ? _usage[index] : null;
-            var barHeight = item is null ? 0 : (int)Math.Round((double)item.Tokens / maximum * (bottom - top - 4));
-            var x = 12 + (int)(index * slot);
+            var bounds = GetBarBounds(index, item, maximum, top, bottom, slot);
             using var bar = new SolidBrush(index == _usage.Count - 1 ? HudColors.Gold : HudColors.Cyan);
-            graphics.FillRectangle(bar, x, bottom - barHeight, Math.Max(5, (int)slot - 7), barHeight);
+            graphics.FillRectangle(bar, bounds);
+            if (index == _hoveredIndex)
+            {
+                using var highlight = new Pen(HudColors.Cream);
+                graphics.DrawRectangle(highlight, bounds.X - 1, bounds.Y - 1, bounds.Width + 1, bounds.Height + 1);
+            }
             var day = item?.Date.ToString("MM/dd", CultureInfo.InvariantCulture) ?? "--";
-            PixelArt.DrawText(graphics, day, dayFont, new Rectangle(x - 2, bottom + 2, (int)slot, 10), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding);
+            PixelArt.DrawText(graphics, day, dayFont, new Rectangle(bounds.X - 2, bottom + 2, (int)slot, 10), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding);
+        }
+
+        if (_hoveredIndex >= 0 && _hoveredIndex < _usage.Count)
+        {
+            DrawTokenTip(graphics, width, top, bottom, slot, maximum, dayFont);
         }
         graphics.Restore(state);
+    }
+
+    private int HitTestBar(Point location)
+    {
+        if (_usage.Count == 0)
+        {
+            return -1;
+        }
+
+        var width = HudScale.Logical(Width);
+        var height = HudScale.Logical(Height);
+        var point = new Point(HudScale.Logical(location.X), HudScale.Logical(location.Y));
+        var maximum = Math.Max(1L, _usage.Max(item => item.Tokens));
+        var top = 28;
+        var bottom = height - 19;
+        var slot = (width - 20f) / 7f;
+        for (var index = 0; index < _usage.Count; index++)
+        {
+            if (GetBarBounds(index, _usage[index], maximum, top, bottom, slot).Contains(point))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    private static Rectangle GetBarBounds(int index, DailyTokenUsage? item, long maximum, int top, int bottom, float slot)
+    {
+        var barHeight = item is null ? 0 : (int)Math.Round((double)item.Tokens / maximum * (bottom - top - 4));
+        var x = 12 + (int)(index * slot);
+        return new Rectangle(x, bottom - barHeight, Math.Max(5, (int)slot - 7), barHeight);
+    }
+
+    private void DrawTokenTip(Graphics graphics, int width, int top, int bottom, float slot, long maximum, Font font)
+    {
+        var item = _usage[_hoveredIndex];
+        var barBounds = GetBarBounds(_hoveredIndex, item, maximum, top, bottom, slot);
+        var text = $"{item.Tokens:N0} {UiText.Tokens}";
+        var tipWidth = Math.Min(width - 16, Math.Max(82, text.Length * 6 + 12));
+        var tipHeight = 20;
+        var tipX = Math.Clamp(barBounds.Left + barBounds.Width / 2 - tipWidth / 2, 8, width - tipWidth - 8);
+        var tipY = Math.Max(top + 2, barBounds.Top - tipHeight - 3);
+        var tipBounds = new Rectangle(tipX, tipY, tipWidth, tipHeight);
+        using var background = new SolidBrush(HudColors.Ink);
+        using var border = new Pen(HudColors.Cream);
+        graphics.FillRectangle(background, tipBounds);
+        graphics.DrawRectangle(border, tipBounds.X, tipBounds.Y, tipBounds.Width - 1, tipBounds.Height - 1);
+        PixelArt.DrawText(
+            graphics,
+            text,
+            font,
+            new Rectangle(tipBounds.X + 5, tipBounds.Y + 4, tipBounds.Width - 10, tipBounds.Height - 7),
+            HudColors.Cream,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
     }
 }
 
