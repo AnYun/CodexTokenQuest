@@ -47,14 +47,14 @@ internal sealed class UsageWindow : Form
         ClientSize = GetPanelSize(_settings.SelectedPanel);
         BackColor = HudColors.Background;
         ForeColor = HudColors.Text;
-        Font = PixelArt.CreateHudFont(8f);
+        Font = PixelArt.CreateMainHudFont(8f);
         FormBorderStyle = FormBorderStyle.None;
         MaximizeBox = MinimizeBox = ShowIcon = ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
         TopMost = DoubleBuffered = true;
 
-        _brand = new Label { Text = "◆ CODEX TOKEN QUEST ◆", Font = PixelArt.CreateHudFont(9f), Location = new(12, 10), Size = new(210, 17) };
-        _status = new Label { Text = "LOADING SAVE DATA...", Font = PixelArt.CreateHudFont(6.5f), Location = new(14, 29), Size = new(215, 14) };
+        _brand = new Label { Text = "◆ CODEX TOKEN QUEST ◆", Font = PixelArt.CreateMainHudFont(9f), Location = new(12, 10), Size = new(210, 17) };
+        _status = new Label { Text = "LOADING SAVE DATA...", Font = PixelArt.CreateMainHudFont(6.5f), Location = new(14, 29), Size = new(215, 14) };
         _theme = CreateButton("A PIX", 249, 9, 61, 25);
         _refresh = CreateButton("↻", 315, 9, 28, 25);
         _close = CreateButton("×", 348, 9, 31, 25);
@@ -73,7 +73,7 @@ internal sealed class UsageWindow : Form
         _stats = new RpgStatsPanel { Location = new(170, 0), Size = new(198, 174) };
         _compactReset = new Label
         {
-            Text = "◆ NEXT RESET // UNKNOWN", Font = PixelArt.CreateHudFont(7f),
+            Text = "◆ NEXT RESET // UNKNOWN", Font = PixelArt.CreateMainHudFont(7f),
             BorderStyle = BorderStyle.FixedSingle, TextAlign = ContentAlignment.MiddleLeft,
             Location = new(3, 180), Padding = new(HudScale.Px(7), 0, 0, 0), Size = new(364, 24)
         };
@@ -82,7 +82,7 @@ internal sealed class UsageWindow : Form
 
         _questTitle = new Label
         {
-            Text = "⚔ STAMINA DUNGEON // WEEKLY LIMITS", Font = PixelArt.CreateHudFont(7f),
+            Text = "⚔ STAMINA DUNGEON // WEEKLY LIMITS", Font = PixelArt.CreateMainHudFont(7f),
             Location = new(3, 0), Size = new(360, 16)
         };
         _quotaCards = new PixelScrollPanel { Location = new(3, 22), Size = new(365, 374) };
@@ -97,7 +97,7 @@ internal sealed class UsageWindow : Form
         _footer = new Label
         {
             Text = "AUTO-SAVE ◆ SYNC 5M ◆ OPTIONS", Cursor = Cursors.Hand,
-            Font = PixelArt.CreateHudFont(6.7f), TextAlign = ContentAlignment.MiddleLeft,
+            Font = PixelArt.CreateMainHudFont(6.7f), TextAlign = ContentAlignment.MiddleLeft,
             Location = new(14, ClientSize.Height - 28), Size = new(ClientSize.Width - 28, 16)
         };
         _footer.Click += (_, _) => ShowSettings();
@@ -134,7 +134,7 @@ internal sealed class UsageWindow : Form
     {
         var button = new Button
         {
-            Text = text, Font = PixelArt.CreateHudFont(7f), FlatStyle = FlatStyle.Flat,
+            Text = text, Font = PixelArt.CreateMainHudFont(7f), FlatStyle = FlatStyle.Flat,
             TabStop = false, Location = new(x, y), Size = new(width, height), Cursor = Cursors.Hand
         };
         button.FlatAppearance.BorderSize = HudScale.Px(2);
@@ -232,16 +232,16 @@ internal sealed class UsageWindow : Form
 
     private void ApplyHudScale()
     {
-        Font = PixelArt.CreateHudFont(8f);
-        _brand.Font = PixelArt.CreateHudFont(9f);
-        _status.Font = PixelArt.CreateHudFont(6.5f);
-        _compactReset.Font = PixelArt.CreateHudFont(7f);
+        Font = PixelArt.CreateMainHudFont(8f);
+        _brand.Font = PixelArt.CreateMainHudFont(9f);
+        _status.Font = PixelArt.CreateMainHudFont(6.5f);
+        _compactReset.Font = PixelArt.CreateMainHudFont(7f);
         _compactReset.Padding = new Padding(HudScale.Px(7), 0, 0, 0);
-        _questTitle.Font = PixelArt.CreateHudFont(7f);
-        _footer.Font = PixelArt.CreateHudFont(6.7f);
+        _questTitle.Font = PixelArt.CreateMainHudFont(7f);
+        _footer.Font = PixelArt.CreateMainHudFont(6.7f);
         foreach (var button in new[] { _campTab, _questsTab, _historyTab, _theme, _refresh, _close })
         {
-            button.Font = PixelArt.CreateHudFont(7f);
+            button.Font = PixelArt.CreateMainHudFont(7f);
             button.FlatAppearance.BorderSize = HudScale.Px(2);
         }
         foreach (var card in _quotaCards.Controls.OfType<QuotaCard>())

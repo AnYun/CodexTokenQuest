@@ -46,8 +46,8 @@ internal sealed class QuotaCard : Control
         var remaining = _bucket.RemainingPercent;
         var accent = remaining switch { <= 10m => HudColors.Red, <= 30m => HudColors.Amber, _ => HudColors.Green };
         PixelArt.DrawPanel(graphics, new Rectangle(0, 0, width, height), accent);
-        using var titleFont = PixelArt.CreateFont(7f);
-        using var valueFont = PixelArt.CreateFont(8.5f);
+        using var titleFont = PixelArt.CreateMainFont(7f);
+        using var valueFont = PixelArt.CreateMainFont(8.5f);
         var name = $"{(_bucket.Name ?? _bucket.Id).ToUpperInvariant()} [{_bucket.Window}]";
         var valueWidth = Math.Min(115, Math.Max(72, width / 3));
         var valueLeft = Math.Max(11, width - valueWidth - 11);

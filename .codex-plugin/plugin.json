@@ -1,11 +1,10 @@
 {
   "name": "codex-token-quest",
-  "version": "1.0.0+codex.20260901100803",
+  "version": "1.0.0+codex.20260902014410",
   "description": "Turn Codex token usage and reset times into a native pixel RPG HUD for Codex Desktop.",
   "author": {
     "name": "Local developer"
   },
-  "hooks": "./hooks/hooks.json",
   "interface": {
     "displayName": "Codex Token Quest",
     "shortDescription": "A pixel RPG HUD for Codex usage.",

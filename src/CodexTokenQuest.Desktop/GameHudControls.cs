@@ -365,8 +365,8 @@ internal sealed class RpgHeroPanel : Control
 
         using var shade = new SolidBrush(Color.FromArgb(225, HudColors.Ink));
         graphics.FillRectangle(shade, 7, height - 43, width - 14, 36);
-        using var nameFont = PixelArt.CreateFont(9f);
-        using var classFont = PixelArt.CreateFont(6.7f);
+        using var nameFont = PixelArt.CreateMainFont(9f);
+        using var classFont = PixelArt.CreateMainFont(6.7f);
         var copy = HudCopy.Hero(character);
         PixelArt.DrawText(graphics, copy.Name, nameFont, new Rectangle(8, height - 41, width - 16, 17), HudColors.Gold, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
         PixelArt.DrawText(graphics, copy.Class, classFont, new Rectangle(8, height - 23, width - 16, 13), HudColors.Cream, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
@@ -417,22 +417,22 @@ internal sealed class RpgStatsPanel : Control
         var tokens = Math.Max(0, _lifetimeTokens ?? 0);
         var level = RpgProgress.GetLevel(tokens);
         var progress = RpgProgress.GetLevelProgress(tokens, level);
-        using var levelFont = PixelArt.CreateFont(height >= 195 ? 17f : 14f);
-        using var labelFont = PixelArt.CreateFont(7f);
-        using var valueFont = PixelArt.CreateFont(height >= 195 ? 9f : 8f);
+        using var levelFont = PixelArt.CreateMainFont(height >= 195 ? 14f : 12f);
+        using var labelFont = PixelArt.CreateMainFont(7f);
+        using var valueFont = PixelArt.CreateMainFont(height >= 195 ? 9f : 8f);
 
         var compact = height < 195;
         PixelArt.DrawText(graphics, $"LV.{level:00}", levelFont, new Rectangle(11, compact ? 7 : 9, width - 22, 28), HudColors.Gold, TextFormatFlags.Left | TextFormatFlags.NoPadding);
         PixelArt.DrawText(graphics, HudCopy.StatusTitle, labelFont, new Rectangle(12, compact ? 32 : 37, width - 24, 14), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding);
 
         var stamina = Math.Clamp(_staminaPercent ?? 0m, 0m, 100m);
-        DrawBar(graphics, HudCopy.Stamina, stamina, $"{stamina:0.#} / 100", compact ? 45 : 56, HudColors.Green, labelFont, width);
-        DrawBar(graphics, HudCopy.Experience, progress, $"{progress:0.#}%", compact ? 75 : 91, HudColors.Cyan, labelFont, width);
+        DrawBar(graphics, HudCopy.Stamina, stamina, $"{stamina:0.#} / 100", compact ? 43 : 56, HudColors.Green, labelFont, width);
+        DrawBar(graphics, HudCopy.Experience, progress, $"{progress:0.#}%", compact ? 72 : 91, HudColors.Cyan, labelFont, width);
 
-        var textTop = compact ? 108 : 128;
+        var textTop = compact ? 103 : 119;
         PixelArt.DrawText(graphics, HudCopy.Lifetime, labelFont, new Rectangle(12, textTop, width - 24, 13), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
         PixelArt.DrawText(graphics, PixelArt.FormatNumber(_lifetimeTokens), valueFont, new Rectangle(12, textTop + 13, width - 24, 20), HudColors.Cream, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
-        var todayOffset = compact ? 29 : 37;
+        var todayOffset = compact ? 28 : 35;
         PixelArt.DrawText(graphics, HudCopy.Today, labelFont, new Rectangle(12, textTop + todayOffset, width - 24, 13), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
         PixelArt.DrawText(graphics, $"+{PixelArt.FormatNumber(_todayTokens)}", valueFont, new Rectangle(12, textTop + todayOffset + 13, width - 24, 20), HudColors.Gold, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
         graphics.Restore(state);
@@ -472,7 +472,7 @@ internal sealed class DailyUsageChart : Control
         var height = HudScale.Logical(Height);
         graphics.SmoothingMode = SmoothingMode.None;
         PixelArt.DrawPanel(graphics, new Rectangle(0, 0, width, height), HudColors.Grid);
-        using var titleFont = PixelArt.CreateFont(7f);
+        using var titleFont = PixelArt.CreateMainFont(7f);
         PixelArt.DrawText(graphics, HudCopy.ChartTitle, titleFont, new Rectangle(11, 8, width - 22, 14), HudColors.Gold, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
         if (_usage.Count == 0)
         {
@@ -485,7 +485,7 @@ internal sealed class DailyUsageChart : Control
         var top = 28;
         var bottom = height - 19;
         var slot = (width - 20f) / 7f;
-        using var dayFont = PixelArt.CreateFont(6f);
+        using var dayFont = PixelArt.CreateMainFont(6f);
         for (var index = 0; index < 7; index++)
         {
             DailyTokenUsage? item = index < _usage.Count ? _usage[index] : null;
@@ -502,11 +502,19 @@ internal sealed class DailyUsageChart : Control
 
 internal static class PixelArt
 {
+    private const float MainTextScale = 1.1f;
+
     internal static Font CreateFont(float pointSize, FontStyle style = FontStyle.Bold) =>
         new("Consolas", pointSize * 96f / 72f, style, GraphicsUnit.Pixel);
 
     internal static Font CreateHudFont(float pointSize, FontStyle style = FontStyle.Bold) =>
         new("Consolas", pointSize * 96f / 72f * (float)HudScale.Factor, style, GraphicsUnit.Pixel);
+
+    internal static Font CreateMainFont(float pointSize, FontStyle style = FontStyle.Bold) =>
+        CreateFont(pointSize * MainTextScale, style);
+
+    internal static Font CreateMainHudFont(float pointSize, FontStyle style = FontStyle.Bold) =>
+        CreateHudFont(pointSize * MainTextScale, style);
 
     internal static void DrawText(Graphics graphics, string text, Font logicalFont, Rectangle logicalBounds, Color color, TextFormatFlags flags)
     {

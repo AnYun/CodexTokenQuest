@@ -57,6 +57,11 @@ internal static class NativeMethods
             {
                 using var process = Process.GetProcessById((int)processId);
                 var processName = process.ProcessName;
+                var hostWindow = process.MainWindowHandle;
+                if (hostWindow == 0 || !IsWindowVisible(hostWindow) || IsIconic(hostWindow))
+                {
+                    hostWindow = window;
+                }
                 var executablePath = string.Empty;
                 try
                 {
@@ -67,7 +72,7 @@ internal static class NativeMethods
                     // Process metadata can be unavailable across privilege boundaries.
                 }
                 var title = new StringBuilder(256);
-                GetWindowText(window, title, title.Capacity);
+                GetWindowText(hostWindow, title, title.Capacity);
 
                 var isCodexProcess = processName.Equals("Codex", StringComparison.OrdinalIgnoreCase) ||
                                      processName.StartsWith("Codex.", StringComparison.OrdinalIgnoreCase);
@@ -84,13 +89,13 @@ internal static class NativeMethods
                                         !isPackagedCodex &&
                                         !isCodexDesktopHost;
                 var modeAllowsHud = !requiresModeCheck ||
-                                    !TryGetCodexDesktopMode(window, out var isCodexMode) ||
+                                    !TryGetCodexDesktopMode(hostWindow, out var isCodexMode) ||
                                     isCodexMode;
                 if (isCodexHost &&
-                    IsForegroundForHost(window) &&
+                    IsForegroundForHost(hostWindow) &&
                     modeAllowsHud)
                 {
-                    result = window;
+                    result = hostWindow;
                     return false;
                 }
             }
