@@ -7,6 +7,9 @@ namespace CodexTokenQuest.Desktop;
 
 internal static class NativeMethods
 {
+    private const int GwlHwndParent = -8;
+    private const int MinimumHostWidth = 640;
+    private const int MinimumHostHeight = 480;
     private static AutomationElement? _modeButton;
     private static nint _modeButtonHost;
 
@@ -37,9 +40,16 @@ internal static class NativeMethods
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     internal static extern int GetWindowText(nint window, StringBuilder text, int maxCount);
 
-    internal static nint FindCodexWindow()
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+    private static extern nint SetWindowLongPtr(nint window, int index, nint value);
+
+    internal static void SetOwnerWindow(nint window, nint owner) =>
+        SetWindowLongPtr(window, GwlHwndParent, owner);
+
+    internal static nint FindCodexWindow(nint preferredWindow = 0)
     {
-        nint result = 0;
+        var candidates = new Dictionary<nint, long>();
+        var foregroundWindow = GetForegroundWindow();
         EnumWindows((window, _) =>
         {
             if (!IsWindowVisible(window) || IsIconic(window))
@@ -57,10 +67,15 @@ internal static class NativeMethods
             {
                 using var process = Process.GetProcessById((int)processId);
                 var processName = process.ProcessName;
-                var hostWindow = process.MainWindowHandle;
-                if (hostWindow == 0 || !IsWindowVisible(hostWindow) || IsIconic(hostWindow))
+                if (!GetWindowRect(window, out var hostBounds))
                 {
-                    hostWindow = window;
+                    return true;
+                }
+                var width = Math.Max(0, hostBounds.Right - hostBounds.Left);
+                var height = Math.Max(0, hostBounds.Bottom - hostBounds.Top);
+                if (width < MinimumHostWidth || height < MinimumHostHeight)
+                {
+                    return true;
                 }
                 var executablePath = string.Empty;
                 try
@@ -72,7 +87,7 @@ internal static class NativeMethods
                     // Process metadata can be unavailable across privilege boundaries.
                 }
                 var title = new StringBuilder(256);
-                GetWindowText(hostWindow, title, title.Capacity);
+                GetWindowText(window, title, title.Capacity);
 
                 var isCodexProcess = processName.Equals("Codex", StringComparison.OrdinalIgnoreCase) ||
                                      processName.StartsWith("Codex.", StringComparison.OrdinalIgnoreCase);
@@ -89,14 +104,11 @@ internal static class NativeMethods
                                         !isPackagedCodex &&
                                         !isCodexDesktopHost;
                 var modeAllowsHud = !requiresModeCheck ||
-                                    !TryGetCodexDesktopMode(hostWindow, out var isCodexMode) ||
+                                    !TryGetCodexDesktopMode(window, out var isCodexMode) ||
                                     isCodexMode;
-                if (isCodexHost &&
-                    IsForegroundForHost(hostWindow) &&
-                    modeAllowsHud)
+                if (isCodexHost && modeAllowsHud)
                 {
-                    result = hostWindow;
-                    return false;
+                    candidates[window] = (long)width * height;
                 }
             }
             catch (ArgumentException)
@@ -107,38 +119,19 @@ internal static class NativeMethods
             return true;
         }, 0);
 
-        if (result == 0)
+        if (candidates.ContainsKey(foregroundWindow))
         {
-            foreach (var process in Process.GetProcessesByName("ChatGPT"))
-            {
-                using (process)
-                {
-                    if (process.MainWindowHandle != 0 &&
-                        !IsIconic(process.MainWindowHandle) &&
-                        IsWindowVisible(process.MainWindowHandle) &&
-                        IsForegroundForHost(process.MainWindowHandle))
-                    {
-                        result = process.MainWindowHandle;
-                        break;
-                    }
-                }
-            }
+            return foregroundWindow;
         }
 
-        return result;
-    }
-
-    private static bool IsForegroundForHost(nint hostWindow)
-    {
-        var foregroundWindow = GetForegroundWindow();
-        if (foregroundWindow == 0)
+        if (preferredWindow != 0 && candidates.ContainsKey(preferredWindow))
         {
-            return false;
+            return preferredWindow;
         }
 
-        GetWindowThreadProcessId(hostWindow, out var hostProcessId);
-        GetWindowThreadProcessId(foregroundWindow, out var foregroundProcessId);
-        return foregroundProcessId == hostProcessId || foregroundProcessId == Environment.ProcessId;
+        return candidates.Count == 0
+            ? 0
+            : candidates.MaxBy(candidate => candidate.Value).Key;
     }
 
     private static bool TryGetCodexDesktopMode(nint hostWindow, out bool isCodexMode)
