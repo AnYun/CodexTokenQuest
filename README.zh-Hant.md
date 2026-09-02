@@ -13,6 +13,24 @@
 
 本專案不會讀取或儲存 ChatGPT Access Token 或 API Key。
 
+## 畫面預覽
+
+### 精簡模式
+
+![只顯示標題、耐力條、重設時間與選項的精簡模式](imgs/zh-Hant/Small.png)
+
+### 遊戲選項
+
+![遊戲選項設定畫面](imgs/zh-Hant/Settings.png)
+
+### 視覺主題
+
+| Pixel Dungeon | Arcane Glass |
+| :---: | :---: |
+| ![Pixel Dungeon 主題](imgs/zh-Hant/Skin_A.png) | ![Arcane Glass 主題](imgs/zh-Hant/Skin_B.png) |
+| **Guild Ledger** | **Code Terminal** |
+| ![Guild Ledger 主題](imgs/zh-Hant/Skin_C.png) | ![Code Terminal 主題](imgs/zh-Hant/Skin_D.png) |
+
 ## 系統需求
 
 - .NET 10 SDK 或更新版本

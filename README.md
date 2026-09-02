@@ -13,6 +13,24 @@ The companion does not inject code into or modify the Codex application. It obse
 
 No ChatGPT access token or API key is read or stored by this project.
 
+## Screenshots
+
+### Compact view
+
+![Compact view showing the title, stamina bar, reset time, and options](imgs/en/Small.png)
+
+### Game options
+
+![Game options](imgs/en/Settings.png)
+
+### Visual themes
+
+| Pixel Dungeon | Arcane Glass |
+| :---: | :---: |
+| ![Pixel Dungeon theme](imgs/en/Skin_A.png) | ![Arcane Glass theme](imgs/en/Skin_B.png) |
+| **Guild Ledger** | **Code Terminal** |
+| ![Guild Ledger theme](imgs/en/Skin_C.png) | ![Code Terminal theme](imgs/en/Skin_D.png) |
+
 ## Requirements
 
 - .NET 10 SDK or newer
