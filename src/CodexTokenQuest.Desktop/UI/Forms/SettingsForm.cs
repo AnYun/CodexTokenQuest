@@ -10,29 +10,34 @@ internal sealed class SettingsForm : Form
     private readonly Label _scaleValue;
     private readonly Label _marginValue;
     private readonly Label _experienceBaseValue;
+    private readonly PixelScaleBar _opacityBar;
+    private readonly Label _opacityValue;
     private int _refreshMinutes;
     private int _hudScalePercent;
     private int _margin;
     private long _experienceBase;
+    private int _opacityPercent;
     private string _language;
 
     internal int RefreshMinutes => _refreshMinutes;
     internal int HudScalePercent => _hudScalePercent;
     internal int HudMargin => _margin;
     internal long ExperienceBase => _experienceBase;
+    internal int OpacityPercent => _opacityPercent;
     internal string Language => _language;
 
-    internal SettingsForm(int currentMinutes, int currentHudScalePercent, int currentMargin, long currentExperienceBase, string currentLanguage)
+    internal SettingsForm(int currentMinutes, int currentHudScalePercent, int currentMargin, long currentExperienceBase, int currentOpacityPercent, string currentLanguage)
     {
         _refreshMinutes = Math.Clamp(currentMinutes, DesktopSettings.MinimumRefreshMinutes, DesktopSettings.MaximumRefreshMinutes);
         _hudScalePercent = Math.Clamp(currentHudScalePercent, DesktopSettings.MinimumHudScalePercent, DesktopSettings.MaximumHudScalePercent);
         _margin = Math.Clamp(currentMargin, DesktopSettings.MinimumMargin, DesktopSettings.MaximumMargin);
         _experienceBase = Math.Clamp(currentExperienceBase, DesktopSettings.MinimumExperienceBase, DesktopSettings.MaximumExperienceBase);
+        _opacityPercent = Math.Clamp(currentOpacityPercent, DesktopSettings.MinimumOpacityPercent, DesktopSettings.MaximumOpacityPercent);
         _language = UiText.NormalizeLanguage(currentLanguage);
 
         Text = $"{UiText.WindowTitle} - {UiText.Pick("Options", "選項")}";
         AutoScaleMode = AutoScaleMode.None;
-        ClientSize = new Size(HudScale.Px(360), HudScale.Px(450));
+        ClientSize = new Size(HudScale.Px(360), HudScale.Px(530));
         BackColor = HudColors.Background;
         ForeColor = HudColors.Text;
         Font = PixelArt.CreateHudFont(8f);
@@ -211,10 +216,48 @@ internal sealed class SettingsForm : Form
         experienceDivide.Click += (_, _) => AdjustExperienceBase(-1);
         experienceMultiply.Click += (_, _) => AdjustExperienceBase(1);
 
+        var opacitySection = new Label
+        {
+            Text = UiText.HudOpacity,
+            Font = PixelArt.CreateHudFont(8.5f),
+            ForeColor = HudColors.Cyan,
+            BackColor = Color.Transparent,
+            Location = new Point(HudScale.Px(20), HudScale.Px(400)),
+            Size = new Size(HudScale.Px(200), HudScale.Px(18))
+        };
+        var opacityDescription = new Label
+        {
+            Text = UiText.HudOpacityDescription,
+            ForeColor = HudColors.Muted,
+            BackColor = Color.Transparent,
+            Location = new Point(HudScale.Px(20), HudScale.Px(419)),
+            Size = new Size(HudScale.Px(320), HudScale.Px(17))
+        };
+        _opacityBar = new PixelScaleBar
+        {
+            Location = new Point(HudScale.Px(20), HudScale.Px(439)),
+            Size = new Size(HudScale.Px(242), HudScale.Px(27)),
+            Minimum = DesktopSettings.MinimumOpacityPercent,
+            Maximum = DesktopSettings.MaximumOpacityPercent,
+            Value = _opacityPercent
+        };
+        _opacityValue = new Label
+        {
+            Text = $"{_opacityPercent}%",
+            Font = PixelArt.CreateHudFont(8f),
+            ForeColor = HudColors.Gold,
+            BackColor = HudColors.Panel,
+            BorderStyle = BorderStyle.FixedSingle,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Location = new Point(HudScale.Px(270), HudScale.Px(439)),
+            Size = new Size(HudScale.Px(70), HudScale.Px(27))
+        };
+        _opacityBar.ValueChanged += (_, _) => SetOpacity(_opacityBar.Value);
+
         var content = new Panel
         {
             Location = new Point(HudScale.Px(17), HudScale.Px(50)),
-            Size = new Size(HudScale.Px(326), HudScale.Px(347)),
+            Size = new Size(HudScale.Px(326), HudScale.Px(427)),
             BackColor = HudColors.Background
         };
         var settingsContent = new Panel
@@ -227,7 +270,7 @@ internal sealed class SettingsForm : Form
             section, description, minusFive, minusOne, _minutesDisplay, plusOne, plusFive, quickLabel,
             sizeSection, sizeDescription, _scaleBar, _scaleValue, marginSection, marginMinus, _marginValue,
             marginPlus, experienceSection, experienceDescription, experienceDivide, _experienceBaseValue,
-            experienceMultiply
+            experienceMultiply, opacitySection, opacityDescription, _opacityBar, _opacityValue
         };
         settingsControls.AddRange(quickButtons);
         foreach (var control in settingsControls)
@@ -238,9 +281,9 @@ internal sealed class SettingsForm : Form
         }
         content.Controls.Add(settingsContent);
 
-        var cancel = CreatePixelButton(UiText.Cancel, HudColors.Red, 176, 406, 78, 28);
+        var cancel = CreatePixelButton(UiText.Cancel, HudColors.Red, 176, 486, 78, 28);
         cancel.DialogResult = DialogResult.Cancel;
-        var save = CreatePixelButton(UiText.Save, HudColors.Green, 264, 406, 78, 28);
+        var save = CreatePixelButton(UiText.Save, HudColors.Green, 264, 486, 78, 28);
         save.DialogResult = DialogResult.OK;
 
         AcceptButton = save;
@@ -265,7 +308,7 @@ internal sealed class SettingsForm : Form
         PixelArt.DrawPanel(eventArgs.Graphics, new Rectangle(0, 0, width, height), HudColors.Gold);
         using var divider = new Pen(HudColors.Grid, 2f);
         eventArgs.Graphics.DrawLine(divider, 18, 45, width - 18, 45);
-        eventArgs.Graphics.DrawLine(divider, 18, 402, width - 18, 402);
+        eventArgs.Graphics.DrawLine(divider, 18, 482, width - 18, 482);
         eventArgs.Graphics.Restore(state);
     }
 
@@ -314,6 +357,12 @@ internal sealed class SettingsForm : Form
 
     private string FormatExperienceBase() => $"{PixelArt.FormatNumber(_experienceBase)} {UiText.Tokens}";
 
+    private void SetOpacity(int percent)
+    {
+        _opacityPercent = Math.Clamp(percent, DesktopSettings.MinimumOpacityPercent, DesktopSettings.MaximumOpacityPercent);
+        _opacityValue.Text = $"{_opacityPercent}%";
+    }
+
     private static Button CreatePixelButton(string text, Color accent, int x, int y, int width, int height)
     {
         var button = new Button
@@ -339,9 +388,36 @@ internal sealed class SettingsForm : Form
 internal sealed class PixelScaleBar : Control
 {
     private int _value = DesktopSettings.DefaultHudScalePercent;
+    private int _minimum = DesktopSettings.MinimumHudScalePercent;
+    private int _maximum = DesktopSettings.MaximumHudScalePercent;
     private bool _dragging;
 
     internal event EventHandler? ValueChanged;
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    internal int Minimum
+    {
+        get => _minimum;
+        set
+        {
+            _minimum = value;
+            if (_maximum < _minimum) _maximum = _minimum;
+            Value = _value;
+            Invalidate();
+        }
+    }
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    internal int Maximum
+    {
+        get => _maximum;
+        set
+        {
+            _maximum = Math.Max(value, _minimum);
+            Value = _value;
+            Invalidate();
+        }
+    }
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     internal int Value
@@ -349,7 +425,7 @@ internal sealed class PixelScaleBar : Control
         get => _value;
         set
         {
-            var next = Math.Clamp(value, DesktopSettings.MinimumHudScalePercent, DesktopSettings.MaximumHudScalePercent);
+            var next = Math.Clamp(value, _minimum, _maximum);
             if (next == _value) return;
             _value = next;
             Invalidate();
@@ -375,8 +451,7 @@ internal sealed class PixelScaleBar : Control
         var height = HudScale.Logical(Height);
         PixelArt.DrawPanel(eventArgs.Graphics, new Rectangle(0, 0, width, height), Focused ? HudColors.Gold : HudColors.Cyan);
         var track = new Rectangle(10, height / 2 - 5, Math.Max(1, width - 20), 10);
-        var progress = (_value - DesktopSettings.MinimumHudScalePercent) * 100m /
-                       (DesktopSettings.MaximumHudScalePercent - DesktopSettings.MinimumHudScalePercent);
+        var progress = (_value - _minimum) * 100m / Math.Max(1, _maximum - _minimum);
         PixelArt.DrawBar(eventArgs.Graphics, track, progress, HudColors.Cyan);
         var thumbX = track.Left + (int)Math.Round((track.Width - 1) * progress / 100m);
         using var thumb = new SolidBrush(HudColors.Gold);
@@ -414,8 +489,8 @@ internal sealed class PixelScaleBar : Control
     {
         if (eventArgs.KeyCode == Keys.Left) Value -= 5;
         else if (eventArgs.KeyCode == Keys.Right) Value += 5;
-        else if (eventArgs.KeyCode == Keys.Home) Value = DesktopSettings.MinimumHudScalePercent;
-        else if (eventArgs.KeyCode == Keys.End) Value = DesktopSettings.MaximumHudScalePercent;
+        else if (eventArgs.KeyCode == Keys.Home) Value = _minimum;
+        else if (eventArgs.KeyCode == Keys.End) Value = _maximum;
         else { base.OnKeyDown(eventArgs); return; }
         eventArgs.Handled = true;
     }
@@ -424,8 +499,7 @@ internal sealed class PixelScaleBar : Control
     {
         var trackWidth = Math.Max(1, HudScale.Logical(Width) - 20);
         var ratio = Math.Clamp((x - 10d) / trackWidth, 0d, 1d);
-        var raw = DesktopSettings.MinimumHudScalePercent +
-                  ratio * (DesktopSettings.MaximumHudScalePercent - DesktopSettings.MinimumHudScalePercent);
+        var raw = _minimum + ratio * (_maximum - _minimum);
         Value = (int)Math.Round(raw);
     }
 }

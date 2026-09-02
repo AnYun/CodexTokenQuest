@@ -1,6 +1,6 @@
 {
   "name": "codex-token-quest",
-  "version": "1.0.0+codex.20260902051422",
+  "version": "1.0.0+codex.20260902053245",
   "description": "Turn Codex token usage and reset times into a native pixel RPG HUD for Codex Desktop.",
   "author": {
     "name": "Local developer"

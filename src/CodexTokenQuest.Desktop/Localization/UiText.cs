@@ -43,6 +43,10 @@ internal static class UiText
         "Higher values slow down level progression",
         "數值越高，等級提升速度越慢");
     internal static string Tokens => Pick("TOKENS", "TOKEN");
+    internal static string HudOpacity => Pick("HUD OPACITY", "介面透明度");
+    internal static string HudOpacityDescription => Pick(
+        "Adjust HUD visibility (20%–100%)",
+        "調整介面可見度（20%–100%）");
     internal static string Cancel => Pick("CANCEL", "取消");
     internal static string Save => Pick("SAVE", "儲存");
     internal static string LanguageButton(string language) =>

@@ -58,6 +58,7 @@ internal sealed class UsageWindow : Form
         MaximizeBox = MinimizeBox = ShowIcon = ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
         TopMost = false;
+        Opacity = _settings.OpacityPercent / 100d;
         DoubleBuffered = true;
 
         _brand = new Label { Text = "◆ CODEX TOKEN QUEST ◆", Font = PixelArt.CreateMainHudFont(9f), Location = new(12, 10), Size = new(210, 17) };
@@ -479,11 +480,12 @@ internal sealed class UsageWindow : Form
 
     private void ShowSettings()
     {
-        using var form = new SettingsForm(_settings.RefreshMinutes, _settings.HudScalePercent, _settings.Margin, _settings.ExperienceBase, _settings.Language);
+        using var form = new SettingsForm(_settings.RefreshMinutes, _settings.HudScalePercent, _settings.Margin, _settings.ExperienceBase, _settings.OpacityPercent, _settings.Language);
         if (form.ShowDialog(this) != DialogResult.OK) return;
         var sizeChanged = _settings.HudScalePercent != form.HudScalePercent;
         var marginChanged = _settings.Margin != form.HudMargin;
         var experienceBaseChanged = _settings.ExperienceBase != form.ExperienceBase;
+        var opacityChanged = _settings.OpacityPercent != form.OpacityPercent;
         var languageChanged = _settings.Language != form.Language;
         _settings = _settings with
         {
@@ -491,6 +493,7 @@ internal sealed class UsageWindow : Form
             HudScalePercent = form.HudScalePercent,
             Margin = form.HudMargin,
             ExperienceBase = form.ExperienceBase,
+            OpacityPercent = form.OpacityPercent,
             Language = form.Language
         };
         _settings.Save();
@@ -514,6 +517,10 @@ internal sealed class UsageWindow : Form
         if (experienceBaseChanged)
         {
             _ = RefreshSnapshotAsync();
+        }
+        if (opacityChanged)
+        {
+            Opacity = _settings.OpacityPercent / 100d;
         }
     }
 
