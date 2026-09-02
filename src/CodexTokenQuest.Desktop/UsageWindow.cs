@@ -4,7 +4,7 @@ internal sealed class UsageWindow : Form
 {
     private static readonly IReadOnlyDictionary<string, Size> PanelSizes = new Dictionary<string, Size>
     {
-        ["CAMP"] = new(392, 350), ["QUESTS"] = new(392, 552), ["HISTORY"] = new(392, 382)
+        ["CAMP"] = new(392, 350), ["QUESTS"] = new(392, 382), ["HISTORY"] = new(392, 382)
     };
 
     private readonly Panel _campPanel, _questsPanel, _historyPanel;
