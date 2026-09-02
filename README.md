@@ -1,5 +1,7 @@
 # Codex Token Quest
 
+English | [繁體中文](README.zh-Hant.md)
+
 A read-only native C# pixel RPG HUD for Codex Desktop. On Windows it runs as a non-activating tool window that follows the ChatGPT/Codex host window and refreshes automatically.
 
 - each available quota window and percentage used/remaining;
@@ -43,6 +45,7 @@ The companion is a standalone Windows UI and does not install a Codex skill or M
 - includes four selectable pixel heroes unlocked at levels 1, 10, 25, and 50, and remembers the selected hero;
 - separates the HUD into remembered `CAMP`, `QUESTS`, and `HISTORY` panels for character progress, stamina modules, and the seven-day quest EXP chart;
 - includes four persistent visual themes—Pixel Dungeon, Arcane Glass, Guild Ledger, and Code Terminal—cycled from the style control;
+- supports persistent English and Traditional Chinese window text, selectable from the game options;
 - refreshes account usage every 5 minutes by default and reset countdowns every second;
 - lets you set a persistent 1–1440 minute refresh interval from the notification-area menu or the update text at the bottom of the window;
 - stays available from the Windows notification area.

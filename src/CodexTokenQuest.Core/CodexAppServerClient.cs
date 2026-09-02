@@ -35,11 +35,11 @@ internal sealed class CodexAppServerClient : IAsyncDisposable
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
-            }) ?? throw new CodexAppServerException("無法啟動 codex app-server。");
+            }) ?? throw new CodexAppServerException("Unable to start codex app-server.");
         }
         catch (Exception exception) when (exception is not CodexAppServerException)
         {
-            throw new CodexAppServerException("找不到 Codex CLI。請先安裝 Codex 並完成登入。", exception);
+            throw new CodexAppServerException("Codex CLI was not found. Install Codex and sign in before trying again.", exception);
         }
 
         var client = new CodexAppServerClient(process);
@@ -128,15 +128,15 @@ internal sealed class CodexAppServerClient : IAsyncDisposable
                     if (message?.Contains("authentication required", StringComparison.OrdinalIgnoreCase) == true)
                     {
                         throw new CodexAppServerException(
-                            "Codex CLI 尚未登入 ChatGPT。請先在終端執行 `codex login`，完成登入後再試一次。" );
+                            "Codex CLI is not signed in to ChatGPT. Run `codex login` in a terminal, complete sign-in, and try again.");
                     }
 
-                    throw new CodexAppServerException($"{method} 失敗：{message}");
+                    throw new CodexAppServerException($"{method} failed: {message}");
                 }
 
                 if (!root.TryGetProperty("result", out var result))
                 {
-                    throw new CodexAppServerException($"{method} 回傳內容缺少 result。" );
+                    throw new CodexAppServerException($"{method} returned a response without a result.");
                 }
 
                 return result.Clone();
@@ -170,8 +170,8 @@ internal sealed class CodexAppServerClient : IAsyncDisposable
     {
         var detail = string.Join(Environment.NewLine, _errors);
         return string.IsNullOrWhiteSpace(detail)
-            ? "codex app-server 已停止。請確認 Codex CLI 已登入 ChatGPT 帳號。"
-            : $"codex app-server 已停止：{detail}";
+            ? "codex app-server stopped. Verify that Codex CLI is signed in to a ChatGPT account."
+            : $"codex app-server stopped: {detail}";
     }
 
     public async ValueTask DisposeAsync()

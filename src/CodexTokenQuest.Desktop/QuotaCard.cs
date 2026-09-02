@@ -21,14 +21,14 @@ internal sealed class QuotaCard : Control
     {
         if (_bucket.ResetsAt is null)
         {
-            _countdown = $"{HudCopy.Reset} // UNKNOWN";
+            _countdown = $"{HudCopy.Reset} // {UiText.Unknown}";
         }
         else
         {
             var local = _bucket.ResetsAt.Value.ToLocalTime();
             var remaining = local - now;
             _countdown = remaining <= TimeSpan.Zero
-                ? $"{HudCopy.Reset} {local:MM/dd HH:mm} // SYNCING"
+                ? $"{HudCopy.Reset} {local:MM/dd HH:mm} // {UiText.Syncing}"
                 : $"{HudCopy.Reset} {local:MM/dd HH:mm} // {FormatDuration(remaining)}";
         }
         Invalidate();
@@ -48,7 +48,7 @@ internal sealed class QuotaCard : Control
         PixelArt.DrawPanel(graphics, new Rectangle(0, 0, width, height), accent);
         using var titleFont = PixelArt.CreateMainFont(7f);
         using var valueFont = PixelArt.CreateMainFont(8.5f);
-        var name = $"{(_bucket.Name ?? _bucket.Id).ToUpperInvariant()} [{_bucket.Window}]";
+        var name = $"{(_bucket.Name ?? _bucket.Id).ToUpperInvariant()} [{UiText.WindowLabel(_bucket.Window)}]";
         var valueWidth = Math.Min(115, Math.Max(72, width / 3));
         var valueLeft = Math.Max(11, width - valueWidth - 11);
         PixelArt.DrawText(graphics, name, titleFont, new Rectangle(11, 8, Math.Max(1, valueLeft - 15), 14), HudColors.Cream, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
@@ -58,9 +58,15 @@ internal sealed class QuotaCard : Control
         graphics.Restore(state);
     }
 
-    internal static string FormatDuration(TimeSpan duration) => duration.TotalDays >= 1
-        ? $"T-{(int)duration.TotalDays}D {duration.Hours:00}H"
-        : duration.TotalHours >= 1
-            ? $"T-{(int)duration.TotalHours:00}H {duration.Minutes:00}M"
-            : $"T-{Math.Max(0, duration.Minutes):00}M {duration.Seconds:00}S";
+    internal static string FormatDuration(TimeSpan duration) => UiText.IsTraditionalChinese
+        ? duration.TotalDays >= 1
+            ? $"T-{(int)duration.TotalDays}日 {duration.Hours:00}時"
+            : duration.TotalHours >= 1
+                ? $"T-{(int)duration.TotalHours:00}時 {duration.Minutes:00}分"
+                : $"T-{Math.Max(0, duration.Minutes):00}分 {duration.Seconds:00}秒"
+        : duration.TotalDays >= 1
+            ? $"T-{(int)duration.TotalDays}D {duration.Hours:00}H"
+            : duration.TotalHours >= 1
+                ? $"T-{(int)duration.TotalHours:00}H {duration.Minutes:00}M"
+                : $"T-{Math.Max(0, duration.Minutes):00}M {duration.Seconds:00}S";
 }

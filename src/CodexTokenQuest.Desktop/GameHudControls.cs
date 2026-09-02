@@ -75,110 +75,112 @@ internal static class HudCopy
 {
     internal static string Brand => HudColors.Theme switch
     {
-        HudTheme.PixelDungeon => "◆ CODEX TOKEN QUEST ◆",
-        HudTheme.ArcaneGlass => "✦ ARCANE TOKEN ORACLE ✦",
-        HudTheme.GuildLedger => "◆ ADVENTURERS' LEDGER ◆",
-        _ => "> CODEX_USAGE_MONITOR"
+        HudTheme.PixelDungeon => L("◆ CODEX TOKEN QUEST ◆", "◆ CODEX 代幣任務 ◆"),
+        HudTheme.ArcaneGlass => L("✦ ARCANE TOKEN ORACLE ✦", "✦ 奧術代幣神諭 ✦"),
+        HudTheme.GuildLedger => L("◆ ADVENTURERS' LEDGER ◆", "◆ 冒險者公會帳簿 ◆"),
+        _ => L("> CODEX_USAGE_MONITOR", "> CODEX_用量監控器")
     };
 
     internal static (string Camp, string Quests, string History) Tabs => HudColors.Theme switch
     {
-        HudTheme.PixelDungeon => ("CAMP", "QUESTS", "HISTORY"),
-        HudTheme.ArcaneGlass => ("SANCTUM", "RUNES", "ECHOES"),
-        HudTheme.GuildLedger => ("GUILD", "CONTRACTS", "LEDGER"),
-        _ => ("STATUS", "LIMITS", "LOGS")
+        HudTheme.PixelDungeon => (L("CAMP", "營地"), L("QUESTS", "任務"), L("HISTORY", "歷史")),
+        HudTheme.ArcaneGlass => (L("SANCTUM", "聖所"), L("RUNES", "符文"), L("ECHOES", "回響")),
+        HudTheme.GuildLedger => (L("GUILD", "公會"), L("CONTRACTS", "契約"), L("LEDGER", "帳簿")),
+        _ => (L("STATUS", "狀態"), L("LIMITS", "額度"), L("LOGS", "紀錄"))
     };
 
     internal static string QuestTitle => HudColors.Theme switch
     {
-        HudTheme.PixelDungeon => "⚔ STAMINA DUNGEON // WEEKLY LIMITS",
-        HudTheme.ArcaneGlass => "✦ RESONANCE RUNES // ARCANE LIMITS",
-        HudTheme.GuildLedger => "◆ ACTIVE CONTRACTS // WEEKLY ALLOWANCE",
-        _ => "> QUOTA_WINDOWS --WEEKLY"
+        HudTheme.PixelDungeon => L("⚔ STAMINA DUNGEON // WEEKLY LIMITS", "⚔ 耐力地城 // 每週額度"),
+        HudTheme.ArcaneGlass => L("✦ RESONANCE RUNES // ARCANE LIMITS", "✦ 共鳴符文 // 奧術額度"),
+        HudTheme.GuildLedger => L("◆ ACTIVE CONTRACTS // WEEKLY ALLOWANCE", "◆ 進行中契約 // 每週額度"),
+        _ => L("> QUOTA_WINDOWS --WEEKLY", "> 額度視窗 --每週")
     };
 
     internal static string Loading => HudColors.Theme switch
     {
-        HudTheme.PixelDungeon => "READING QUEST LOG...",
-        HudTheme.ArcaneGlass => "DIVINING TOKEN ECHOES...",
-        HudTheme.GuildLedger => "OPENING GUILD RECORDS...",
-        _ => "READING_USAGE_STREAM..."
+        HudTheme.PixelDungeon => L("READING QUEST LOG...", "讀取任務紀錄..."),
+        HudTheme.ArcaneGlass => L("DIVINING TOKEN ECHOES...", "占卜代幣回響..."),
+        HudTheme.GuildLedger => L("OPENING GUILD RECORDS...", "開啟公會紀錄..."),
+        _ => L("READING_USAGE_STREAM...", "讀取_用量_資料流...")
     };
 
     internal static string Ready(DateTimeOffset time) => HudColors.Theme switch
     {
-        HudTheme.PixelDungeon => $"SAVE OK ◆ {time:HH:mm:ss}",
-        HudTheme.ArcaneGlass => $"ORACLE ATTUNED ✦ {time:HH:mm:ss}",
-        HudTheme.GuildLedger => $"LEDGER SEALED ◆ {time:HH:mm:ss}",
-        _ => $"STATUS_OK :: {time:HH:mm:ss}"
+        HudTheme.PixelDungeon => L($"SAVE OK ◆ {time:HH:mm:ss}", $"儲存完成 ◆ {time:HH:mm:ss}"),
+        HudTheme.ArcaneGlass => L($"ORACLE ATTUNED ✦ {time:HH:mm:ss}", $"神諭同步 ✦ {time:HH:mm:ss}"),
+        HudTheme.GuildLedger => L($"LEDGER SEALED ◆ {time:HH:mm:ss}", $"帳簿封存 ◆ {time:HH:mm:ss}"),
+        _ => L($"STATUS_OK :: {time:HH:mm:ss}", $"狀態_正常 :: {time:HH:mm:ss}")
     };
 
     internal static string Lost => HudColors.Theme switch
     {
-        HudTheme.PixelDungeon => "QUEST LOG LOST ◆ RETRY",
-        HudTheme.ArcaneGlass => "DIVINATION BROKEN ✦ RETRY",
-        HudTheme.GuildLedger => "LEDGER UNAVAILABLE ◆ RETRY",
-        _ => "ERR_USAGE_STREAM :: RETRY"
+        HudTheme.PixelDungeon => L("QUEST LOG LOST ◆ RETRY", "任務紀錄遺失 ◆ 重試"),
+        HudTheme.ArcaneGlass => L("DIVINATION BROKEN ✦ RETRY", "占卜中斷 ✦ 重試"),
+        HudTheme.GuildLedger => L("LEDGER UNAVAILABLE ◆ RETRY", "帳簿無法使用 ◆ 重試"),
+        _ => L("ERR_USAGE_STREAM :: RETRY", "錯誤_用量資料流 :: 重試")
     };
 
     internal static string Footer(int minutes) => HudColors.Theme switch
     {
-        HudTheme.PixelDungeon => $"AUTO-SAVE ◆ SYNC {minutes}M ◆ OPTIONS",
-        HudTheme.ArcaneGlass => $"AUTO-ATTUNE ✦ {minutes}M ✦ SETTINGS",
-        HudTheme.GuildLedger => $"AUTO-RECORD ◆ {minutes}M ◆ OPTIONS",
-        _ => $"AUTO_SYNC={minutes}M :: CONFIG"
+        HudTheme.PixelDungeon => L($"AUTO-SAVE ◆ SYNC {minutes}M ◆ OPTIONS", $"自動儲存 ◆ 同步 {minutes}分 ◆ 選項"),
+        HudTheme.ArcaneGlass => L($"AUTO-ATTUNE ✦ {minutes}M ✦ SETTINGS", $"自動調和 ✦ {minutes}分 ✦ 設定"),
+        HudTheme.GuildLedger => L($"AUTO-RECORD ◆ {minutes}M ◆ OPTIONS", $"自動記錄 ◆ {minutes}分 ◆ 選項"),
+        _ => L($"AUTO_SYNC={minutes}M :: CONFIG", $"自動_同步={minutes}分 :: 設定")
     };
 
     internal static string EmptyHistory => HudColors.Theme switch
     {
-        HudTheme.ArcaneGlass => "NO ECHOES DETECTED", HudTheme.GuildLedger => "NO ENTRIES RECORDED",
-        HudTheme.CodeTerminal => "NO_LOG_DATA", _ => "NO QUEST RECORD"
+        HudTheme.ArcaneGlass => L("NO ECHOES DETECTED", "未偵測到回響"),
+        HudTheme.GuildLedger => L("NO ENTRIES RECORDED", "尚無帳簿紀錄"),
+        HudTheme.CodeTerminal => L("NO_LOG_DATA", "沒有_紀錄_資料"),
+        _ => L("NO QUEST RECORD", "尚無任務紀錄")
     };
 
     internal static string StatusTitle => HudColors.Theme switch
     {
-        HudTheme.PixelDungeon => "ADVENTURER STATUS",
-        HudTheme.ArcaneGlass => "ARCANE SIGNATURE",
-        HudTheme.GuildLedger => "GUILD RECORD",
-        _ => "AGENT STATUS"
+        HudTheme.PixelDungeon => L("ADVENTURER STATUS", "冒險者狀態"),
+        HudTheme.ArcaneGlass => L("ARCANE SIGNATURE", "奧術印記"),
+        HudTheme.GuildLedger => L("GUILD RECORD", "公會紀錄"),
+        _ => L("AGENT STATUS", "代理狀態")
     };
 
     internal static string Stamina => HudColors.Theme switch
     {
-        HudTheme.ArcaneGlass => "MANA", HudTheme.GuildLedger => "VIGOR",
-        HudTheme.CodeTerminal => "QUOTA", _ => "STA"
+        HudTheme.ArcaneGlass => L("MANA", "魔力"), HudTheme.GuildLedger => L("VIGOR", "活力"),
+        HudTheme.CodeTerminal => L("QUOTA", "額度"), _ => L("STA", "耐力")
     };
 
     internal static string Experience => HudColors.Theme switch
     {
-        HudTheme.ArcaneGlass => "AURA", HudTheme.GuildLedger => "RENOWN",
-        HudTheme.CodeTerminal => "LOAD", _ => "EXP"
+        HudTheme.ArcaneGlass => L("AURA", "靈氣"), HudTheme.GuildLedger => L("RENOWN", "聲望"),
+        HudTheme.CodeTerminal => L("LOAD", "負載"), _ => L("EXP", "經驗")
     };
 
     internal static string Lifetime => HudColors.Theme switch
     {
-        HudTheme.ArcaneGlass => "CRYSTAL MEMORY", HudTheme.GuildLedger => "LIFETIME RENOWN",
-        HudTheme.CodeTerminal => "TOTAL TOKENS", _ => "TOTAL EXP"
+        HudTheme.ArcaneGlass => L("CRYSTAL MEMORY", "水晶記憶"), HudTheme.GuildLedger => L("LIFETIME RENOWN", "累積聲望"),
+        HudTheme.CodeTerminal => L("TOTAL TOKENS", "代幣總數"), _ => L("TOTAL EXP", "總經驗")
     };
 
     internal static string Today => HudColors.Theme switch
     {
-        HudTheme.ArcaneGlass => "TODAY'S SPARK", HudTheme.GuildLedger => "TODAY'S BOUNTY",
-        HudTheme.CodeTerminal => "SESSION TOKENS", _ => "TODAY QUEST EXP"
+        HudTheme.ArcaneGlass => L("TODAY'S SPARK", "今日星火"), HudTheme.GuildLedger => L("TODAY'S BOUNTY", "今日賞金"),
+        HudTheme.CodeTerminal => L("SESSION TOKENS", "工作階段代幣"), _ => L("TODAY QUEST EXP", "今日任務經驗")
     };
 
     internal static string Reset => HudColors.Theme switch
     {
-        HudTheme.ArcaneGlass => "RECHARGE", HudTheme.GuildLedger => "RENEWAL",
-        HudTheme.CodeTerminal => "RESET_AT", _ => "RESET"
+        HudTheme.ArcaneGlass => L("RECHARGE", "充能"), HudTheme.GuildLedger => L("RENEWAL", "更新"),
+        HudTheme.CodeTerminal => L("RESET_AT", "重設時間"), _ => L("RESET", "重設")
     };
 
     internal static string ChartTitle => HudColors.Theme switch
     {
-        HudTheme.ArcaneGlass => "ECHOES // 7-DAY RESONANCE",
-        HudTheme.GuildLedger => "LEDGER // 7-DAY BOUNTY",
-        HudTheme.CodeTerminal => "> TOKEN_LOG --LAST=7D",
-        _ => "QUEST LOG // 7-DAY EXP"
+        HudTheme.ArcaneGlass => L("ECHOES // 7-DAY RESONANCE", "回響 // 7 日共鳴"),
+        HudTheme.GuildLedger => L("LEDGER // 7-DAY BOUNTY", "帳簿 // 7 日賞金"),
+        HudTheme.CodeTerminal => L("> TOKEN_LOG --LAST=7D", "> 代幣_紀錄 --最近=7日"),
+        _ => L("QUEST LOG // 7-DAY EXP", "任務紀錄 // 7 日經驗")
     };
 
     internal static (string Name, string Class) Hero(RpgCharacter character)
@@ -188,16 +190,24 @@ internal static class HudCopy
         {
             HudTheme.ArcaneGlass => (
                 $"✦ {new[] { "CAEL", "SELENE", "IRIS", "ORION" }[index]} ✦",
-                new[] { "CRYSTAL WARDEN", "ASTRAL ORACLE", "PRISM RANGER", "RUNE SENTINEL" }[index]),
+                L(
+                    new[] { "CRYSTAL WARDEN", "ASTRAL ORACLE", "PRISM RANGER", "RUNE SENTINEL" }[index],
+                    new[] { "水晶守衛", "星界神諭", "稜鏡遊俠", "符文哨兵" }[index])),
             HudTheme.GuildLedger => (
                 new[] { "ROWAN", "ELSPETH", "BRIAR", "GARRICK" }[index],
-                new[] { "GUILD SWORD", "LEDGER ARCANIST", "CONTRACT RANGER", "GUILD MARSHAL" }[index]),
+                L(
+                    new[] { "GUILD SWORD", "LEDGER ARCANIST", "CONTRACT RANGER", "GUILD MARSHAL" }[index],
+                    new[] { "公會劍士", "帳簿秘法師", "契約遊俠", "公會元帥" }[index])),
             HudTheme.CodeTerminal => (
                 $"[{new[] { "CIPHER", "SYNTAX", "PACKET", "KERNEL" }[index]}]",
-                $"ROLE::{new[] { "CODE_SENTINEL", "SYNTAX_WITCH", "PACKET_RANGER", "FIREWALL_KNIGHT" }[index]}"),
-            _ => ($"◀ {character.Name} ▶", character.ClassName)
+                L(
+                    $"ROLE::{new[] { "CODE_SENTINEL", "SYNTAX_WITCH", "PACKET_RANGER", "FIREWALL_KNIGHT" }[index]}",
+                    $"角色::{new[] { "程式哨兵", "語法巫師", "封包遊俠", "防火牆騎士" }[index]}")),
+            _ => ($"◀ {character.Name} ▶", L(character.ClassName, new[] { "劍盾守衛", "星界法師", "荒野遊俠", "符文騎士" }[index]))
         };
     }
+
+    private static string L(string english, string traditionalChinese) => UiText.Pick(english, traditionalChinese);
 }
 
 internal sealed record RpgCharacter(string Name, string ClassName, int UnlockLevel, int Column, int Row);
@@ -425,7 +435,7 @@ internal sealed class RpgStatsPanel : Control
         using var valueFont = PixelArt.CreateMainFont(height >= 195 ? 9f : 8f);
 
         var compact = height < 195;
-        PixelArt.DrawText(graphics, $"LV.{level:00}", levelFont, new Rectangle(11, compact ? 7 : 9, width - 22, 28), HudColors.Gold, TextFormatFlags.Left | TextFormatFlags.NoPadding);
+        PixelArt.DrawText(graphics, $"{UiText.Level}{level:00}", levelFont, new Rectangle(11, compact ? 7 : 9, width - 22, 28), HudColors.Gold, TextFormatFlags.Left | TextFormatFlags.NoPadding);
         PixelArt.DrawText(graphics, HudCopy.StatusTitle, labelFont, new Rectangle(12, compact ? 32 : 37, width - 24, 14), HudColors.Muted, TextFormatFlags.Left | TextFormatFlags.NoPadding);
 
         var stamina = Math.Clamp(_staminaPercent ?? 0m, 0m, 100m);
@@ -443,8 +453,10 @@ internal sealed class RpgStatsPanel : Control
 
     private static void DrawBar(Graphics graphics, string label, decimal percent, string value, int y, Color color, Font font, int width)
     {
-        PixelArt.DrawText(graphics, label, font, new Rectangle(12, y, 32, 13), HudColors.Text, TextFormatFlags.Left | TextFormatFlags.NoPadding);
-        PixelArt.DrawText(graphics, value, font, new Rectangle(48, y, width - 60, 13), HudColors.Cream, TextFormatFlags.Right | TextFormatFlags.NoPadding);
+        var labelWidth = UiText.IsTraditionalChinese ? 52 : 32;
+        var valueLeft = 16 + labelWidth;
+        PixelArt.DrawText(graphics, label, font, new Rectangle(12, y, labelWidth, 13), HudColors.Text, TextFormatFlags.Left | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+        PixelArt.DrawText(graphics, value, font, new Rectangle(valueLeft, y, width - valueLeft - 12, 13), HudColors.Cream, TextFormatFlags.Right | TextFormatFlags.NoPadding);
         PixelArt.DrawBar(graphics, new Rectangle(12, y + 15, width - 24, 10), percent, color);
     }
 }

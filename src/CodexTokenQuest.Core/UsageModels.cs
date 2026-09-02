@@ -106,8 +106,8 @@ internal static class UsageSnapshotParser
         var planType = ReadString(limit, "planType");
         var reachedType = ReadString(limit, "rateLimitReachedType");
 
-        AddWindow("primary", "主要", id, name, planType, reachedType, limit, target, seen);
-        AddWindow("secondary", "次要", id, name, planType, reachedType, limit, target, seen);
+        AddWindow("primary", "PRIMARY", id, name, planType, reachedType, limit, target, seen);
+        AddWindow("secondary", "SECONDARY", id, name, planType, reachedType, limit, target, seen);
     }
 
     private static void AddWindow(

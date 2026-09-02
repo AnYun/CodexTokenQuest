@@ -12,18 +12,21 @@ internal sealed class SettingsForm : Form
     private int _refreshMinutes;
     private int _hudScalePercent;
     private int _margin;
+    private string _language;
 
     internal int RefreshMinutes => _refreshMinutes;
     internal int HudScalePercent => _hudScalePercent;
     internal int HudMargin => _margin;
+    internal string Language => _language;
 
-    internal SettingsForm(int currentMinutes, int currentHudScalePercent, int currentMargin)
+    internal SettingsForm(int currentMinutes, int currentHudScalePercent, int currentMargin, string currentLanguage)
     {
         _refreshMinutes = Math.Clamp(currentMinutes, DesktopSettings.MinimumRefreshMinutes, DesktopSettings.MaximumRefreshMinutes);
         _hudScalePercent = Math.Clamp(currentHudScalePercent, DesktopSettings.MinimumHudScalePercent, DesktopSettings.MaximumHudScalePercent);
         _margin = Math.Clamp(currentMargin, DesktopSettings.MinimumMargin, DesktopSettings.MaximumMargin);
+        _language = UiText.NormalizeLanguage(currentLanguage);
 
-        Text = "Codex Token Quest Options";
+        Text = $"{UiText.WindowTitle} - {UiText.Pick("Options", "選項")}";
         AutoScaleMode = AutoScaleMode.None;
         ClientSize = new Size(HudScale.Px(360), HudScale.Px(360));
         BackColor = HudColors.Background;
@@ -41,19 +44,26 @@ internal sealed class SettingsForm : Form
 
         var title = new Label
         {
-            Text = "◆ GAME OPTIONS ◆",
+            Text = UiText.GameOptions,
             Font = PixelArt.CreateHudFont(11f),
             ForeColor = HudColors.Gold,
             BackColor = Color.Transparent,
             Location = new Point(HudScale.Px(18), HudScale.Px(15)),
-            Size = new Size(HudScale.Px(260), HudScale.Px(22))
+            Size = new Size(HudScale.Px(200), HudScale.Px(22))
+        };
+        var language = CreatePixelButton(UiText.LanguageButton(_language), HudColors.Cyan, 222, 11, 86, 27);
+        language.Font = PixelArt.CreateHudFont(7f);
+        language.Click += (_, _) =>
+        {
+            _language = _language == UiText.English ? UiText.TraditionalChinese : UiText.English;
+            language.Text = UiText.LanguageButton(_language);
         };
         var close = CreatePixelButton("×", HudColors.Red, 316, 11, 28, 27);
         close.DialogResult = DialogResult.Cancel;
 
         var section = new Label
         {
-            Text = "AUTO-SAVE INTERVAL",
+            Text = UiText.RefreshInterval,
             Font = PixelArt.CreateHudFont(8.5f),
             ForeColor = HudColors.Cyan,
             BackColor = Color.Transparent,
@@ -62,7 +72,7 @@ internal sealed class SettingsForm : Form
         };
         var description = new Label
         {
-            Text = "多久重新讀取一次 Codex 用量（1–1440 分鐘）",
+            Text = UiText.RefreshDescription,
             ForeColor = HudColors.Muted,
             BackColor = Color.Transparent,
             Location = new Point(HudScale.Px(20), HudScale.Px(74)),
@@ -86,7 +96,7 @@ internal sealed class SettingsForm : Form
 
         var quickLabel = new Label
         {
-            Text = "QUICK SLOTS",
+            Text = UiText.QuickSlots,
             ForeColor = HudColors.Muted,
             BackColor = Color.Transparent,
             Location = new Point(HudScale.Px(20), HudScale.Px(148)),
@@ -103,7 +113,7 @@ internal sealed class SettingsForm : Form
 
         var sizeSection = new Label
         {
-            Text = "HUD SIZE",
+            Text = UiText.HudSize,
             Font = PixelArt.CreateHudFont(8.5f),
             ForeColor = HudColors.Cyan,
             BackColor = Color.Transparent,
@@ -112,7 +122,7 @@ internal sealed class SettingsForm : Form
         };
         var sizeDescription = new Label
         {
-            Text = "拖曳調整介面大小（50%–300%）",
+            Text = UiText.HudSizeDescription,
             ForeColor = HudColors.Muted,
             BackColor = Color.Transparent,
             Location = new Point(HudScale.Px(20), HudScale.Px(226)),
@@ -139,7 +149,7 @@ internal sealed class SettingsForm : Form
 
         var marginSection = new Label
         {
-            Text = "HUD MARGIN",
+            Text = UiText.HudMargin,
             Font = PixelArt.CreateHudFont(8f),
             ForeColor = HudColors.Cyan,
             BackColor = Color.Transparent,
@@ -163,14 +173,14 @@ internal sealed class SettingsForm : Form
         marginMinus.Click += (_, _) => AdjustMargin(-1);
         marginPlus.Click += (_, _) => AdjustMargin(1);
 
-        var cancel = CreatePixelButton("CANCEL", HudColors.Red, 176, 316, 78, 28);
+        var cancel = CreatePixelButton(UiText.Cancel, HudColors.Red, 176, 316, 78, 28);
         cancel.DialogResult = DialogResult.Cancel;
-        var save = CreatePixelButton("SAVE", HudColors.Green, 264, 316, 78, 28);
+        var save = CreatePixelButton(UiText.Save, HudColors.Green, 264, 316, 78, 28);
         save.DialogResult = DialogResult.OK;
 
         AcceptButton = save;
         CancelButton = cancel;
-        Controls.AddRange([title, close, section, description, minusFive, minusOne, _minutesDisplay, plusOne, plusFive, quickLabel, sizeSection, sizeDescription, _scaleBar, _scaleValue, marginSection, marginMinus, _marginValue, marginPlus, cancel, save]);
+        Controls.AddRange([title, language, close, section, description, minusFive, minusOne, _minutesDisplay, plusOne, plusFive, quickLabel, sizeSection, sizeDescription, _scaleBar, _scaleValue, marginSection, marginMinus, _marginValue, marginPlus, cancel, save]);
 
         Shown += (_, _) =>
         {

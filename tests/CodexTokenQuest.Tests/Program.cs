@@ -43,9 +43,9 @@ var rateLimits = (System.Collections.ICollection)type.GetProperty("RateLimits")!
 var dailyUsage = (System.Collections.ICollection)type.GetProperty("DailyUsage")!.GetValue(snapshot)!;
 var credits = (int?)type.GetProperty("AvailableResetCredits")!.GetValue(snapshot);
 
-Assert(rateLimits.Count == 2, "應解析 primary 與 secondary 視窗");
-Assert(dailyUsage.Count == 1, "應解析每日 Token 用量");
-Assert(credits == 1, "應解析可用重置次數");
+Assert(rateLimits.Count == 2, "Primary and secondary windows should be parsed.");
+Assert(dailyUsage.Count == 1, "Daily token usage should be parsed.");
+Assert(credits == 1, "Available reset credits should be parsed.");
 
 var localReader = assembly.GetType("CodexTokenQuest.Core.LocalTokenUsageReader", throwOnError: true)!;
 var tryReadIncrement = localReader.GetMethod("TryReadIncrement", BindingFlags.NonPublic | BindingFlags.Static)!;
@@ -63,7 +63,7 @@ var tokenEvent = JsonSerializer.Serialize(new
 });
 var arguments = new object?[] { tokenEvent, localToday, 0L };
 var parsedLocalTokens = (bool)tryReadIncrement.Invoke(null, arguments)!;
-Assert(parsedLocalTokens && (long)arguments[2]! == 24680L, "應解析本機今日工作階段的增量 Token");
+Assert(parsedLocalTokens && (long)arguments[2]! == 24680L, "Today's local session token increment should be parsed.");
 
 Console.WriteLine("All usage parser tests passed.");
 return 0;

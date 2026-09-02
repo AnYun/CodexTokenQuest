@@ -17,6 +17,7 @@ internal sealed class UsageWindow : Form
     private readonly Label _brand, _questTitle, _status, _compactReset, _footer;
     private readonly Button _campTab, _questsTab, _historyTab, _theme, _refresh, _close;
     private readonly Icon? _applicationIcon;
+    private readonly ContextMenuStrip _trayMenu;
     private readonly NotifyIcon _trayIcon;
     private readonly System.Windows.Forms.Timer _hostTimer, _countdownTimer, _refreshTimer;
     private readonly CancellationTokenSource _shutdown = new();
@@ -44,9 +45,10 @@ internal sealed class UsageWindow : Form
     internal UsageWindow()
     {
         _settings = DesktopSettings.Load();
+        UiText.SetLanguage(_settings.Language);
         HudScale.Set(_settings.HudScalePercent);
         HudColors.SetTheme((HudTheme)_settings.ThemeIndex);
-        Text = "Codex Token Quest";
+        Text = UiText.WindowTitle;
         AutoScaleMode = AutoScaleMode.None;
         ClientSize = GetPanelSize(_settings.SelectedPanel);
         BackColor = HudColors.Background;
@@ -110,18 +112,10 @@ internal sealed class UsageWindow : Form
         Resize += (_, _) => LayoutResponsiveControls();
         LayoutResponsiveControls();
 
-        var trayMenu = new ContextMenuStrip();
-        trayMenu.Items.Add("顯示 / 隱藏", null, (_, _) => ToggleVisibility());
-        trayMenu.Items.Add("營地", null, (_, _) => SelectPanel("CAMP"));
-        trayMenu.Items.Add("任務額度", null, (_, _) => SelectPanel("QUESTS"));
-        trayMenu.Items.Add("歷史紀錄", null, (_, _) => SelectPanel("HISTORY"));
-        trayMenu.Items.Add("切換介面主題", null, (_, _) => CycleTheme());
-        trayMenu.Items.Add("重新讀取冒險紀錄", null, async (_, _) => await RefreshSnapshotAsync());
-        trayMenu.Items.Add("遊戲選項", null, (_, _) => ShowSettings());
-        trayMenu.Items.Add(new ToolStripSeparator());
-        trayMenu.Items.Add("離開遊戲", null, (_, _) => ExitApplication());
+        _trayMenu = new ContextMenuStrip();
+        BuildTrayMenu();
         _applicationIcon = TryLoadApplicationIcon();
-        _trayIcon = new NotifyIcon { Icon = _applicationIcon ?? SystemIcons.Application, Text = "Codex Token Quest", ContextMenuStrip = trayMenu, Visible = true };
+        _trayIcon = new NotifyIcon { Icon = _applicationIcon ?? SystemIcons.Application, Text = UiText.WindowTitle, ContextMenuStrip = _trayMenu, Visible = true };
         _trayIcon.DoubleClick += (_, _) => ToggleVisibility();
 
         _hostTimer = new() { Interval = 500, Enabled = true };
@@ -157,6 +151,28 @@ internal sealed class UsageWindow : Form
         {
             return null;
         }
+    }
+
+    private void BuildTrayMenu()
+    {
+        _trayMenu.Items.Clear();
+        _trayMenu.Items.Add(UiText.TrayToggle, null, (_, _) => ToggleVisibility());
+        _trayMenu.Items.Add(UiText.TrayCamp, null, (_, _) => SelectPanel("CAMP"));
+        _trayMenu.Items.Add(UiText.TrayQuests, null, (_, _) => SelectPanel("QUESTS"));
+        _trayMenu.Items.Add(UiText.TrayHistory, null, (_, _) => SelectPanel("HISTORY"));
+        _trayMenu.Items.Add(UiText.TrayTheme, null, (_, _) => CycleTheme());
+        _trayMenu.Items.Add(UiText.TrayRefresh, null, async (_, _) => await RefreshSnapshotAsync());
+        _trayMenu.Items.Add(UiText.TrayOptions, null, (_, _) => ShowSettings());
+        _trayMenu.Items.Add(new ToolStripSeparator());
+        _trayMenu.Items.Add(UiText.TrayExit, null, (_, _) => ExitApplication());
+    }
+
+    private void ApplyLanguage()
+    {
+        Text = UiText.WindowTitle;
+        BuildTrayMenu();
+        ApplyTheme();
+        UpdateCountdowns();
     }
 
     private void SelectPanel(string panel)
@@ -411,7 +427,9 @@ internal sealed class UsageWindow : Form
         if (todayTokens is not null) chartUsage.Add(new(today, todayTokens.Value));
         _dailyChart.SetData(chartUsage);
         var hero = RpgHeroPanel.Characters[selected];
-        _trayIcon.Text = stamina is null ? $"{hero.Name} ◆ LV.{level}" : $"{hero.Name} ◆ LV.{level} ◆ STA {stamina:0.#}";
+        _trayIcon.Text = stamina is null
+            ? $"{hero.Name} ◆ {UiText.Level}{level}"
+            : $"{hero.Name} ◆ {UiText.Level}{level} ◆ {UiText.Stamina} {stamina:0.#}";
     }
 
     private void RenderError(string message)
@@ -424,8 +442,8 @@ internal sealed class UsageWindow : Form
         UpdateCompactReset(DateTimeOffset.Now);
         _status.Text = HudCopy.Lost;
         _status.ForeColor = HudColors.Red;
-        _trayIcon.Text = "Codex Token Quest：讀取失敗";
-        _trayIcon.BalloonTipTitle = "冒險紀錄讀取失敗";
+        _trayIcon.Text = UiText.TrayReadFailed;
+        _trayIcon.BalloonTipTitle = UiText.ReadFailed;
         _trayIcon.BalloonTipText = message.Length > 220 ? message[..220] : message;
         _trayIcon.ShowBalloonTip(3500);
     }
@@ -441,14 +459,14 @@ internal sealed class UsageWindow : Form
     {
         if (_compactResetAt is null)
         {
-            _compactReset.Text = $"◆ NEXT {HudCopy.Reset} // UNKNOWN";
+            _compactReset.Text = $"◆ {UiText.Next} {HudCopy.Reset} // {UiText.Unknown}";
             _compactReset.ForeColor = HudColors.Muted;
             return;
         }
         var local = _compactResetAt.Value.ToLocalTime();
         var remaining = local - now;
-        var countdown = remaining <= TimeSpan.Zero ? "SYNCING" : QuotaCard.FormatDuration(remaining);
-        _compactReset.Text = $"◆ NEXT {HudCopy.Reset} // {local:MM/dd HH:mm} // {countdown}";
+        var countdown = remaining <= TimeSpan.Zero ? UiText.Syncing : QuotaCard.FormatDuration(remaining);
+        _compactReset.Text = $"◆ {UiText.Next} {HudCopy.Reset} // {local:MM/dd HH:mm} // {countdown}";
         _compactReset.ForeColor = remaining <= TimeSpan.FromHours(12) ? HudColors.Amber : HudColors.Cyan;
     }
 
@@ -461,15 +479,17 @@ internal sealed class UsageWindow : Form
 
     private void ShowSettings()
     {
-        using var form = new SettingsForm(_settings.RefreshMinutes, _settings.HudScalePercent, _settings.Margin);
+        using var form = new SettingsForm(_settings.RefreshMinutes, _settings.HudScalePercent, _settings.Margin, _settings.Language);
         if (form.ShowDialog(this) != DialogResult.OK) return;
         var sizeChanged = _settings.HudScalePercent != form.HudScalePercent;
         var marginChanged = _settings.Margin != form.HudMargin;
+        var languageChanged = _settings.Language != form.Language;
         _settings = _settings with
         {
             RefreshMinutes = form.RefreshMinutes,
             HudScalePercent = form.HudScalePercent,
-            Margin = form.HudMargin
+            Margin = form.HudMargin,
+            Language = form.Language
         };
         _settings.Save();
         ApplyRefreshInterval();
@@ -483,6 +503,11 @@ internal sealed class UsageWindow : Form
         {
             _lastPlacement = null;
             TrackHostWindow();
+        }
+        if (languageChanged)
+        {
+            UiText.SetLanguage(_settings.Language);
+            ApplyLanguage();
         }
     }
 
@@ -576,6 +601,7 @@ internal sealed class UsageWindow : Form
             _countdownTimer.Dispose();
             _refreshTimer.Dispose();
             _trayIcon.Dispose();
+            _trayMenu.Dispose();
             _applicationIcon?.Dispose();
             if (_client is not null) { _client.DisposeAsync().AsTask().GetAwaiter().GetResult(); _client = null; }
             _shutdown.Dispose();
