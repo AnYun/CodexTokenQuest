@@ -1,6 +1,6 @@
 # Codex Token Quest
 
-English | [繁體中文](README.zh-Hant.md)
+English | [正體中文](README.zh-Hant.md)
 
 A read-only native C# pixel RPG HUD for Codex Desktop. On Windows it runs as a non-activating tool window that follows the ChatGPT/Codex host window and refreshes automatically.
 

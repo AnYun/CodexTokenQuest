@@ -52,7 +52,7 @@ internal static class UiText
     internal static string Cancel => Pick("CANCEL", "取消");
     internal static string Save => Pick("SAVE", "儲存");
     internal static string LanguageButton(string language) =>
-        NormalizeLanguage(language) == TraditionalChinese ? "語言 繁中" : "LANG EN";
+        NormalizeLanguage(language) == TraditionalChinese ? "正體中文" : "LANG EN";
 
     internal static string TrayToggle => Pick("Show / Hide", "顯示 / 隱藏");
     internal static string TrayCamp => Pick("Camp", "營地");
