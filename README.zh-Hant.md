@@ -18,13 +18,27 @@
 
 介面優先使用原 Windows 版的 **Consolas 粗體**；Mac 已安裝時會使用相同字型，否則依序使用 Menlo、Courier New。外掛不附帶 Consolas 字型檔，Mac 可安裝本機已有的字型以配合 Windows。底部重設列保留完整標籤、本地日期時間與中文／英文 `T-` 倒數。
 
-## 共用介面預覽
+## 畫面截圖
 
-以下使用共用 Avalonia 介面渲染，內容為範例資料。
+以下為 Windows／macOS 共用 Avalonia 介面的截圖，內容使用範例資料。
 
-![Codex Token Quest](imgs/shared/camp-zh-Hant.png)
+### 精簡模式
 
-設定視窗也沿用 HUD 的四種像素主題，包含配色、邊框、調整按鈕與固定於底部的儲存／取消操作。設定開啟期間切換 HUD 樣式，尚未儲存的數值會保留。
+![精簡模式：耐力、重設日期與倒數](imgs/shared/compact-zh-Hant.png)
+
+### 遊戲選項
+
+設定視窗會跟隨 HUD 選用的主題，包含配色、像素邊框與調整按鈕。儲存／取消固定於底部；設定開啟期間切換 HUD 樣式，尚未儲存的數值會保留。
+
+![像素風格遊戲選項](imgs/shared/settings-zh-Hant.png)
+
+### 四種樣式
+
+| Pixel Dungeon | Arcane Glass |
+| :---: | :---: |
+| ![Pixel Dungeon 像素地城樣式](imgs/shared/camp-zh-Hant.png) | ![Arcane Glass 奧術樣式](imgs/shared/camp-arcane-zh-Hant.png) |
+| **Guild Ledger** | **Code Terminal** |
+| ![Guild Ledger 公會帳簿樣式](imgs/shared/camp-guild-zh-Hant.png) | ![Code Terminal 程式終端樣式](imgs/shared/camp-terminal-zh-Hant.png) |
 
 ## 系統需求
 

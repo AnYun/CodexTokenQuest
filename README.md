@@ -18,13 +18,27 @@ The HUD uses the original Windows **Consolas Bold** font on both systems when in
 
 Today's local session token increments supplement delayed account data. When both sources are available, the larger value is used. Failed refreshes retain the last data with an error indicator; hover the error for details and retry.
 
-## Shared interface preview
+## Screenshots
 
-Sample data rendered by the shared Avalonia UI.
+These screenshots show the shared Windows/macOS Avalonia interface with sample data.
 
-![Codex Token Quest](imgs/shared/camp-en.png)
+### Compact view
 
-Settings use the same four pixel themes as the HUD, with themed adjustment buttons and a fixed Save/Cancel footer. Changing the HUD theme while settings are open preserves unsaved values.
+![Compact view with stamina, reset date and countdown](imgs/shared/compact-en.png)
+
+### Game options
+
+Settings follow the selected HUD theme, including colors, pixel borders and adjustment buttons. Save and Cancel stay at the bottom; changing the HUD theme while settings are open preserves unsaved values.
+
+![Pixel-themed game options](imgs/shared/settings-en.png)
+
+### Visual themes
+
+| Pixel Dungeon | Arcane Glass |
+| :---: | :---: |
+| ![Pixel Dungeon theme](imgs/shared/camp-en.png) | ![Arcane Glass theme](imgs/shared/camp-arcane-en.png) |
+| **Guild Ledger** | **Code Terminal** |
+| ![Guild Ledger theme](imgs/shared/camp-guild-en.png) | ![Code Terminal theme](imgs/shared/camp-terminal-en.png) |
 
 ## Requirements
 
