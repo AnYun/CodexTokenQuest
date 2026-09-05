@@ -2,92 +2,105 @@
 
 [English](README.md) | 正體中文
 
-一款適用於 Codex Desktop、唯讀的原生 C# 像素 RPG HUD。在 Windows 上，它會以不可啟用的工具視窗執行，跟隨 ChatGPT／Codex 主視窗並自動重新整理。
+適用於 Codex Desktop 的唯讀像素 RPG HUD。**Windows 與 macOS 使用同一套 C#／Avalonia 介面與 .NET 10 核心**；作業系統差異集中在原生視窗 adapter 和啟動入口，沒有分成兩個產品版本。
 
-- 顯示每個可用額度視窗及已使用／剩餘百分比；
-- 以本地時間顯示下一次重設時間；
-- 帳號提供資料時，顯示累積與近期每日 Token 活動；
-- 顯示可用的已取得重設次數。
+- 額度視窗、已用／剩餘百分比、本地時間的重設倒數與可用重設次數。
+- CAMP、QUESTS、HISTORY 三個面板與精簡模式。
+- 1–99 級經驗進度，四名英雄於 1、10、25、50 級解鎖。
+- Pixel Dungeon、Arcane Glass、Guild Ledger、Code Terminal 四個主題。
+- 英文／正體中文、50–300% 縮放、0–100 邊距、20–100% 透明度、1K–1T 經驗基數。
+- 預設每 5 分鐘更新，可設定為 1–1440 分鐘；倒數每秒更新。
+- Windows 通知區／Mac 選單列提供顯示、隱藏、切換面板、刷新、設定與離開。
 
-此伴隨程式不會向 Codex 應用程式注入程式碼，也不會修改 Codex。它只會觀察最上層的 ChatGPT／Codex 主視窗，並固定在其右下角內側。
+預設 100% 尺寸等於原本的 80%。舊設定的百分比會換算為新基準，並維持在 50–300% 範圍內；儲存後不會重複換算。
 
-本專案不會讀取或儲存 ChatGPT Access Token 或 API Key。
+帳號用量缺少今日數值時，會使用本地 Codex 工作階段 Token 增量；兩者都有資料時取較高值。資料讀取失敗會保留上次資料並標示錯誤，可將滑鼠移至錯誤文字查看原因，再按重新整理。
 
-## 畫面預覽
+介面優先使用原 Windows 版的 **Consolas 粗體**；Mac 已安裝時會使用相同字型，否則依序使用 Menlo、Courier New。外掛不附帶 Consolas 字型檔，Mac 可安裝本機已有的字型以配合 Windows。底部重設列保留完整標籤、本地日期時間與中文／英文 `T-` 倒數。
 
-### 精簡模式
+## 共用介面預覽
 
-![只顯示標題、耐力條、重設時間與選項的精簡模式](imgs/zh-Hant/Small.png)
+以下使用共用 Avalonia 介面渲染，內容為範例資料。
 
-### 遊戲選項
+![Codex Token Quest](imgs/shared/camp-zh-Hant.png)
 
-![遊戲選項設定畫面](imgs/zh-Hant/Settings.png)
-
-### 視覺主題
-
-| Pixel Dungeon | Arcane Glass |
-| :---: | :---: |
-| ![Pixel Dungeon 主題](imgs/zh-Hant/Skin_A.png) | ![Arcane Glass 主題](imgs/zh-Hant/Skin_B.png) |
-| **Guild Ledger** | **Code Terminal** |
-| ![Guild Ledger 主題](imgs/zh-Hant/Skin_C.png) | ![Code Terminal 主題](imgs/zh-Hant/Skin_D.png) |
+設定視窗也沿用 HUD 的四種像素主題，包含配色、邊框、調整按鈕與固定於底部的儲存／取消操作。設定開啟期間切換 HUD 樣式，尚未儲存的數值會保留。
 
 ## 系統需求
 
-- .NET 10 SDK 或更新版本
-- 可透過 `codex` 命令使用 Codex CLI
-- Codex CLI 已登入 ChatGPT 帳號
+- Windows（已驗證 Windows 11 ARM）或 Apple Silicon macOS。
+- **.NET 10 SDK 正式版**，只有 Runtime 不足以從原始碼啟動。從 [Microsoft](https://dotnet.microsoft.com/download/dotnet/10.0) 安裝；Mac 也會偵測 `~/.dotnet/dotnet`。
+- 已登入 ChatGPT 帳號的 Codex CLI。程式會先搜尋 PATH，再檢查 Homebrew、使用者安裝與 Codex Desktop 常見附帶位置。
+- 首次建置需連線至 NuGet 取得 Avalonia 套件。
 
-僅使用 API Key 或 Amazon Bedrock 的驗證方式不會提供 ChatGPT Token 活動摘要。
+僅 API Key 或 Amazon Bedrock 驗證不提供 ChatGPT Token 活動摘要。此次不涵蓋 Linux 或 Intel Mac。
 
-## 方案結構
+## 啟動
 
-- `CodexTokenQuest.Core`：包含 Codex App Server 用戶端、用量模型、解析器與本地 Token 讀取器的類別庫。
-- `CodexTokenQuest.Desktop`：沒有主控台視窗的原生 WinForms RPG HUD（`WinExe`）。
-- `CodexTokenQuest.Tests`：解析器與本地 Token 的迴歸測試。
-
-## 執行
+Windows：
 
 ```powershell
 .\scripts\start-desktop.ps1
 ```
 
-## Codex Desktop
+Mac：
 
-此伴隨程式是獨立的 Windows UI，不會安裝 Codex Skill 或 MCP Server。視窗功能如下：
-
-- 只有桌面主程式明確處於 Codex 模式時，才會自動顯示在右下角；
-- 主程式關閉、最小化、切換到 ChatGPT 模式或被其他應用程式遮住時會隱藏，Codex 模式再次回到前景後便會恢復；
-- Codex 移動或調整大小時會跟著重新定位；
-- 提供像素風 RPG 營地，顯示英雄肖像、等級、經驗值、今日任務經驗與每週耐力；
-- 將累積 Token 轉換為 1 到 99 級的指數式 RPG 經驗等級，並可設定 `1K`～`1T` 的經驗值基數來調整升級速度；
-- 提供四名可選擇的像素英雄，分別於 1、10、25、50 級解鎖，並記住所選英雄；
-- 將 HUD 分成可記憶的 `CAMP`、`QUESTS`、`HISTORY` 面板，分別呈現角色進度、耐力模組與七日任務經驗圖表；
-- 提供 Pixel Dungeon、Arcane Glass、Guild Ledger、Code Terminal 四種可持續保存的視覺主題，可透過樣式控制切換；
-- 支援可持續保存的英文與正體中文視窗文字，可從遊戲選項切換；
-- 提供可持續保存的 HUD 透明度設定，可在 20% 到 100% 之間調整；
-- 提供可記憶的精簡模式，只保留標題、耐力條、重設時間與底部選項；
-- 預設每 5 分鐘重新整理帳號用量，每秒更新重設倒數；
-- 可從通知區選單或視窗底部的更新文字，設定並保存 1–1440 分鐘的重新整理間隔；
-- 可持續從 Windows 通知區存取。
-
-今日即時 Token 數值會優先使用帳號資料。由於帳號 API 的每日資料可能延遲數日才發佈，伴隨程式會改為加總今日的本地 Codex 工作階段增量，避免錯誤顯示為零。
-
-此外掛使用 Codex 原生的 `SessionStart` 與 `UserPromptSubmit` Hook，在 Codex 開啟、恢復工作或收到第一個提示時啟動或復原伴隨程式。Hook 命令會透過 Codex 可攜式 `${PLUGIN_ROOT}` 變數解析 `scripts\start-desktop.ps1`，因此不會寫死使用者目錄或安裝路徑。Codex 主程序關閉後，伴隨程式會在五秒寬限時間後結束。生命週期診斷會寫入 `%LocalAppData%\CodexTokenQuest\lifecycle.log`。本程式不使用 Windows 登入 Registry、工作排程器、Skill 或 MCP Server。
-
-為了維持相容性，`scripts\install-autostart.ps1` 現在會移除舊版登入／工作排程啟動項目，並為目前工作階段啟用現行的 Hook 啟動方式。
-
-## 驗證
-
-```powershell
-dotnet build .\CodexTokenQuest.slnx --configuration Release
-dotnet run --project .\tests\CodexTokenQuest.Tests\CodexTokenQuest.Tests.csproj --configuration Release
+```sh
+sh ./scripts/start-desktop.sh
 ```
+
+兩個入口都會立即交給背景程序；共用 C# Launcher 負責建置判斷、防止重複啟動及建立本地 App。首次啟動需等候建置，失敗後可檢查記錄並重試。建置產物以執行環境分開存放於 `artifacts/`，避免共享資料夾中的 Mac／Windows 輸出互相覆寫。
+
+同一份 `hooks/hooks.json` 使用 `SessionStart` 和 `UserPromptSubmit`。`command` 啟動 Mac shell 入口，`commandWindows` 啟動 Windows PowerShell 入口；路徑透過 `${PLUGIN_ROOT}` 解析，含空白的安裝路徑也可使用。沒有新增 Skill、MCP Server、登入啟動項目或排程器。
+
+舊版 `install-autostart.ps1` 仍可移除既有的 Windows 登入／排程啟動方式，並呼叫現行入口。更新原始碼後，請從選單列／通知區結束 HUD 再啟動，讓更新生效。
+
+## Mac 輔助使用權限
+
+第一次啟動時，HUD 會提示開啟「系統設定 → 隱私權與安全性 → 輔助使用」，請授予 **Codex Token Quest** 權限。若需手動加入 App，其位置是：
+
+```text
+~/Library/Application Support/CodexTokenQuest/Codex Token Quest.app
+```
+
+未授權、拒絕或撤銷權限時，HUD 暫停跟隨，選單列入口仍可操作；授權後會重新偵測。若系統要求重新啟動，請結束 HUD 後再次執行啟動腳本。
+
+本地 App 使用固定 Bundle ID 與安裝位置，但原始碼重建後的 ad-hoc 簽章可能使 macOS 要求重新授權；必要時將輔助使用清單中的舊項目移除，再加入上述 App。此工作流程不包含 Developer ID 簽署、公證或公開下載的安裝包。
+
+## 視窗與設定
+
+HUD 位於目前 Codex 主視窗的右下角，隨移動、縮放和螢幕切換重新定位。主程式失去焦點時保留 HUD；最小化、隱藏或位於其他桌面時才隱藏。Mac 切到其他 App 時，HUD 保持浮動層級，避免被 Codex 主視窗蓋住；操作 HUD 或其設定時仍可使用。手動隱藏後須由通知區／選單列恢復。Codex 程序離開五秒後，HUD 會結束。
+
+Mac 依 `com.openai.codex` Bundle ID 辨識主程式，支援名稱為 `ChatGPT.app` 的 Codex。Windows 依桌面視窗及套件身分辨識，CLI 背景程序不會被當成桌面主程式。HUD 不注入或修改 Codex。
+
+設定及記錄位置：
+
+| 系統 | 目錄 |
+| --- | --- |
+| Windows | `%LocalAppData%\CodexTokenQuest` |
+| macOS | `~/Library/Application Support/CodexTokenQuest` |
+
+`settings.json` 保留舊 Windows 欄位與數值；`lifecycle.log` 記錄啟動和視窗狀態，`bootstrap.log` 記錄 SDK／入口錯誤。`CODEX_HOME` 仍可指定本地工作階段目錄。
+
+## 開發與驗證
+
+若 Mac 的終端機仍選到舊 SDK，可將下列 `dotnet` 改為 `~/.dotnet/dotnet`。啟動腳本會自動尋找 .NET 10。
+
+```sh
+dotnet build CodexTokenQuest.slnx --configuration Release
+dotnet run --project tests/CodexTokenQuest.Tests --configuration Release
+# 額外產生 4 主題 × 2 語言 × 4 面板 × 4 資料狀態的介面測試圖
+dotnet run --project tests/CodexTokenQuest.Tests --configuration Release -- --render
+# 不讀取帳號、不儲存設定的範例資料預覽
+dotnet run --project src/CodexTokenQuest.Desktop -- --preview --language zh-Hant --theme 0 --panel CAMP
+```
+
+測試涵蓋解析器、本地 Token、生命週期、定位、舊設定相容性、CLI 解析、跨程序鎖、崩潰後重啟、來源指紋與 App Server 錯誤恢復。視窗跟隨、混合 DPI、全螢幕／Spaces、焦點及權限仍需在相應桌面環境驗證；詳見 [驗證記錄](docs/validation.md)。
+
+方案由 Core（資料及共用策略）、Desktop（共用 Avalonia 介面與平台 adapter）、Launcher（共用啟動流程）及 Tests 組成。
 
 ## 資料來源
 
-應用程式使用官方 Codex App Server JSONL 通訊協定：
+部分 CLI 版本未實作 `account/usage/read`。HUD 先嘗試 PATH；若該版本缺少端點，再檢查其他已安裝 CLI（包含 Codex 桌面版內附版本），切換至可讀取累計用量的版本。額度與累計用量始終來自同一個 App Server，並沿用 `CODEX_HOME`。若所有版本都不支援，仍會更新額度、倒數與本機今日 Token，累計用量及其衍生的等級、經驗才標示為未知。介面僅顯示簡短提示，完整協定與 CLI 選擇訊息寫入 `lifecycle.log`；暫時性用量錯誤會在下次更新時重試。
 
-- `account/rateLimits/read`
-- `account/usage/read`
-
-此外掛刻意維持唯讀，絕不呼叫使用重設次數的端點。
+只呼叫 Codex App Server JSONL 的 `account/rateLimits/read` 和 `account/usage/read`，不呼叫使用重設次數的端點，不直接讀取或儲存 Access Token／API Key。

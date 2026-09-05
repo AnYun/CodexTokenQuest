@@ -9,5 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\CodexTokenQuest.Core\CodexTokenQuest.Core.csproj" />
+    <ProjectReference Include="../../src/CodexTokenQuest.Desktop/CodexTokenQuest.Desktop.csproj" />
+    <PackageReference Include="Avalonia.Headless" Version="12.1.2" />
   </ItemGroup>
 </Project>

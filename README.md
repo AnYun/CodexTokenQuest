@@ -2,92 +2,103 @@
 
 English | [正體中文](README.zh-Hant.md)
 
-A read-only native C# pixel RPG HUD for Codex Desktop. On Windows it runs as a non-activating tool window that follows the ChatGPT/Codex host window and refreshes automatically.
+A read-only pixel RPG HUD for Codex Desktop. **Windows and macOS share one C# / Avalonia UI and .NET 10 core.** Native window adapters and small bootstrap scripts contain the OS differences; there are no separate product implementations.
 
-- each available quota window and percentage used/remaining;
-- the next reset time in local time;
-- lifetime and recent daily token activity when the account provides it;
-- the number of available earned reset credits.
+- Quota windows, used / remaining percentages, local reset times, countdowns and available reset credits.
+- CAMP, QUESTS, HISTORY and compact view.
+- Levels 1–99; four heroes unlocked at levels 1, 10, 25 and 50.
+- Pixel Dungeon, Arcane Glass, Guild Ledger and Code Terminal themes.
+- English / Traditional Chinese, 50–300% scaling, margins, 20–100% opacity and a 1K–1T experience base.
+- Five-minute refresh by default, configurable from 1–1440 minutes, with per-second countdowns.
+- Windows tray / Mac menu bar actions for visibility, panels, refresh, settings and exit.
 
-The companion does not inject code into or modify the Codex application. It observes the top-level ChatGPT/Codex host window and stays anchored inside its lower-right corner.
+The default 100% HUD size equals the previous 80% size. Saved percentages are converted to the new baseline once, within the 50–300% range.
 
-No ChatGPT access token or API key is read or stored by this project.
+The HUD uses the original Windows **Consolas Bold** font on both systems when installed, falling back to Menlo or Courier New on Mac. Consolas is not bundled with the plugin; install your locally available copy on Mac to match Windows. The bottom reset line includes the label, local date/time and localized `T-` countdown.
 
-## Screenshots
+Today's local session token increments supplement delayed account data. When both sources are available, the larger value is used. Failed refreshes retain the last data with an error indicator; hover the error for details and retry.
 
-### Compact view
+## Shared interface preview
 
-![Compact view showing the title, stamina bar, reset time, and options](imgs/en/Small.png)
+Sample data rendered by the shared Avalonia UI.
 
-### Game options
+![Codex Token Quest](imgs/shared/camp-en.png)
 
-![Game options](imgs/en/Settings.png)
-
-### Visual themes
-
-| Pixel Dungeon | Arcane Glass |
-| :---: | :---: |
-| ![Pixel Dungeon theme](imgs/en/Skin_A.png) | ![Arcane Glass theme](imgs/en/Skin_B.png) |
-| **Guild Ledger** | **Code Terminal** |
-| ![Guild Ledger theme](imgs/en/Skin_C.png) | ![Code Terminal theme](imgs/en/Skin_D.png) |
+Settings use the same four pixel themes as the HUD, with themed adjustment buttons and a fixed Save/Cancel footer. Changing the HUD theme while settings are open preserves unsaved values.
 
 ## Requirements
 
-- .NET 10 SDK or newer
-- Codex CLI available as `codex`
-- Codex CLI signed in with a ChatGPT-backed account
+- Windows (validated on Windows 11 ARM) or Apple Silicon macOS.
+- A **stable .NET 10 SDK**, not just the runtime. Install it from [Microsoft](https://dotnet.microsoft.com/download/dotnet/10.0). The Mac bootstrap also discovers `~/.dotnet/dotnet`.
+- Codex CLI authenticated with a ChatGPT account. The resolver checks PATH first, then common Homebrew, user and desktop-bundled locations.
+- NuGet access for the initial Avalonia restore.
 
-API-key-only and Amazon Bedrock authentication do not expose ChatGPT token-activity summaries.
-
-## Solution structure
-
-- `CodexTokenQuest.Core`: class library containing the Codex App Server client, usage models, parsers, and local token reader.
-- `CodexTokenQuest.Desktop`: native WinForms RPG HUD (`WinExe`), with no console window.
-- `CodexTokenQuest.Tests`: parser and local-token regression tests.
+API-key-only and Amazon Bedrock authentication do not provide ChatGPT token activity summaries. Linux and Intel Macs are outside this release's scope.
 
 ## Run
+
+Windows:
 
 ```powershell
 .\scripts\start-desktop.ps1
 ```
 
-## Codex Desktop
+Mac:
 
-The companion is a standalone Windows UI and does not install a Codex skill or MCP server. The window:
-
-- appears automatically in the lower-right corner only while the desktop host is visibly in Codex mode;
-- hides while the desktop host is closed, minimized, switched to ChatGPT mode, or behind another application, then returns when Codex mode is in the foreground again;
-- follows Codex when it moves or resizes;
-- provides a pixel-art RPG camp with a hero portrait, level, EXP, today's quest EXP, and weekly stamina;
-- turns lifetime tokens into exponential RPG experience levels from 1 to 99, with a configurable EXP base (`1K`–`1T`) for pacing;
-- includes four selectable pixel heroes unlocked at levels 1, 10, 25, and 50, and remembers the selected hero;
-- separates the HUD into remembered `CAMP`, `QUESTS`, and `HISTORY` panels for character progress, stamina modules, and the seven-day quest EXP chart;
-- includes four persistent visual themes—Pixel Dungeon, Arcane Glass, Guild Ledger, and Code Terminal—cycled from the style control;
-- supports persistent English and Traditional Chinese window text, selectable from the game options;
-- provides a persistent HUD opacity setting from 20% to 100%;
-- includes a remembered compact view that keeps only the title, stamina bar, reset time, and options footer;
-- refreshes account usage every 5 minutes by default and reset countdowns every second;
-- lets you set a persistent 1–1440 minute refresh interval from the notification-area menu or the update text at the bottom of the window;
-- stays available from the Windows notification area.
-
-Today's live token value uses the account bucket when available. Because the account API can publish daily buckets several days late, the companion falls back to summing today's local Codex session increments instead of incorrectly displaying zero.
-
-The plugin uses native Codex `SessionStart` and `UserPromptSubmit` hooks to launch or recover the companion when Codex opens, resumes a task, or receives the first prompt. Hook commands resolve `scripts\start-desktop.ps1` from Codex's portable `${PLUGIN_ROOT}` variable, so no user profile or installation path is hard-coded. When the Codex host process closes, the companion exits after a five-second grace period. Lifecycle diagnostics are written to `%LocalAppData%\CodexTokenQuest\lifecycle.log`. It does not use the Windows login registry, Task Scheduler, a skill, or an MCP server.
-
-For compatibility, `scripts\install-autostart.ps1` now removes legacy login/task startup entries and enables the current hook-driven launch for the active session.
-
-## Verify
-
-```powershell
-dotnet build .\CodexTokenQuest.slnx --configuration Release
-dotnet run --project .\tests\CodexTokenQuest.Tests\CodexTokenQuest.Tests.csproj --configuration Release
+```sh
+sh ./scripts/start-desktop.sh
 ```
 
-## Data source
+Both entry points detach promptly. The shared C# launcher checks source changes, serializes builds, prevents duplicate instances and prepares the local app. The first launch takes time to build; inspect logs and retry if it fails. Outputs are isolated by runtime under `artifacts/`, including when a folder is shared between Windows and Mac.
 
-The app uses the official Codex App Server JSONL protocol:
+One `hooks/hooks.json` handles both `SessionStart` and `UserPromptSubmit`: `command` uses the Mac shell bootstrap and `commandWindows` uses PowerShell. `${PLUGIN_ROOT}` resolves the installation path, including spaces. No skill, MCP server, login startup entry or task scheduler is added.
 
-- `account/rateLimits/read`
-- `account/usage/read`
+The legacy `install-autostart.ps1` still removes old Windows login / scheduled startup entries and invokes the current bootstrap. After updating the sources, quit the HUD from its tray / menu bar and launch again to rebuild.
 
-The plugin is intentionally read-only and never calls the reset-consumption endpoint.
+## macOS Accessibility
+
+The first launch explains how to allow **Codex Token Quest** in **System Settings → Privacy & Security → Accessibility**. To add the app manually, use:
+
+```text
+~/Library/Application Support/CodexTokenQuest/Codex Token Quest.app
+```
+
+While permission is missing, denied or revoked, tracking pauses and the menu bar remains available. Tracking is checked again after authorization. Quit and relaunch if macOS requests it.
+
+The app uses a fixed bundle ID and location. Rebuilding its locally ad-hoc-signed executable can still require reauthorization; if needed, remove the old Accessibility entry and add the app at the path above. This source workflow does not include Developer ID signing, notarization or public installer packages.
+
+## Window behavior and storage
+
+The HUD follows the active Codex window's bottom-right corner. Losing focus does not hide the HUD. It hides when the host is minimized, hidden or on another desktop. On Mac, the HUD retains floating window level even while Codex is inactive. HUD controls and settings remain usable. A manually hidden HUD stays hidden until restored from the tray / menu bar. It exits five seconds after the Codex desktop process disappears.
+
+On Mac the host is identified by bundle ID `com.openai.codex`, including installations named `ChatGPT.app`. On Windows desktop windows and package identity identify the host; CLI processes are excluded. The companion does not inject code into or modify Codex.
+
+| OS | Settings and logs |
+| --- | --- |
+| Windows | `%LocalAppData%\CodexTokenQuest` |
+| macOS | `~/Library/Application Support/CodexTokenQuest` |
+
+`settings.json` preserves existing Windows fields and values. `lifecycle.log` records launch and host state; `bootstrap.log` records SDK and bootstrap failures. `CODEX_HOME` remains supported for local sessions.
+
+## Development and validation
+
+If your Mac terminal still selects an older SDK, use `~/.dotnet/dotnet` in place of `dotnet` below. The launcher discovers .NET 10 automatically.
+
+```sh
+dotnet build CodexTokenQuest.slnx --configuration Release
+dotnet run --project tests/CodexTokenQuest.Tests --configuration Release
+# Render 4 themes × 2 languages × 4 panel modes × 4 data states
+dotnet run --project tests/CodexTokenQuest.Tests --configuration Release -- --render
+# Sample data, no account access or settings writes
+dotnet run --project src/CodexTokenQuest.Desktop -- --preview --language en --theme 0 --panel CAMP
+```
+
+Tests cover parsing, local tokens, lifecycle, placement, legacy settings, CLI resolution, interprocess leases, crash recovery, build fingerprints and App Server error recovery. Native tracking, mixed DPI, full-screen / Spaces, focus and authorization still require desktop validation. See the [validation record](docs/validation.md).
+
+The solution contains Core (data and shared policies), Desktop (shared Avalonia UI and platform adapters), Launcher (shared startup logic), and Tests.
+
+## Data sources
+
+Only the read-only Codex App Server JSONL methods `account/rateLimits/read` and `account/usage/read` are called. The app never consumes reset credits and does not directly read or store access tokens or API keys.
+
+Some CLI versions do not implement `account/usage/read`. The HUD tries PATH first; when that server lacks the endpoint, it checks other installed CLIs, including the Codex desktop app's bundled CLI, and switches to one that supplies account usage. Quota and totals are always read from the same server with the inherited `CODEX_HOME`. If none supports the endpoint, quota, reset times and local today's tokens continue refreshing, while lifetime totals and derived level/experience remain unavailable. A short localized notice stays inside the HUD; protocol and CLI selection details go to `lifecycle.log`. Temporary usage errors are retried on the next refresh.

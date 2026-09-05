@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"${PLUGIN_ROOT}\\scripts\\start-desktop.ps1\"",
+            "command": "sh \"${PLUGIN_ROOT}/scripts/start-desktop.sh\"",
             "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"${PLUGIN_ROOT}\\scripts\\start-desktop.ps1\"",
             "timeoutSec": 15,
             "async": true,
@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"${PLUGIN_ROOT}\\scripts\\start-desktop.ps1\"",
+            "command": "sh \"${PLUGIN_ROOT}/scripts/start-desktop.sh\"",
             "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"${PLUGIN_ROOT}\\scripts\\start-desktop.ps1\"",
             "timeoutSec": 15,
             "async": true,

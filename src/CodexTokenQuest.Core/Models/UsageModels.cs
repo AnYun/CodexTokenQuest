@@ -8,7 +8,10 @@ internal sealed record UsageSnapshot(
     TokenSummary? Tokens,
     IReadOnlyList<DailyTokenUsage> DailyUsage,
     int? AvailableResetCredits,
-    string? Warning);
+    string? Warning)
+{
+    public bool UsageUnsupported { get; init; }
+}
 
 internal sealed record RateLimitBucket(
     string Id,

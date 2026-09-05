@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/CodexTokenQuest.Launcher/CodexTokenQuest.Launcher.csproj" />
     <Project Path="src/CodexTokenQuest.Core/CodexTokenQuest.Core.csproj" />
     <Project Path="src/CodexTokenQuest.Desktop/CodexTokenQuest.Desktop.csproj" />
   </Folder>

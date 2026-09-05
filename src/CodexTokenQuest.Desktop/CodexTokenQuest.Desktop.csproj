@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ApplicationIcon>..\..\assets\icons\tray-icon.ico</ApplicationIcon>
@@ -11,11 +10,16 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\CodexTokenQuest.Core\CodexTokenQuest.Core.csproj" />
-    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WPF" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\..\assets\rpg\hero-sprite-sheet*.png" Link="assets\rpg\%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="../../assets/icons/plugin-icon.png" Link="assets/icons/plugin-icon.png" CopyToOutputDirectory="PreserveNewest" />
+    <InternalsVisibleTo Include="CodexTokenQuest.Tests" />
   </ItemGroup>
 </Project>

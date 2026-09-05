@@ -1,43 +1,32 @@
+param([switch]$Worker)
+$ErrorActionPreference = 'Stop'
 $pluginRoot = Split-Path -Parent $PSScriptRoot
-$projectPath = Join-Path $pluginRoot 'src\CodexTokenQuest.Desktop\CodexTokenQuest.Desktop.csproj'
-$assemblyPath = Join-Path $pluginRoot 'src\CodexTokenQuest.Desktop\bin\Release\net10.0-windows\CodexTokenQuest.Desktop.exe'
-$stateDirectory = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'CodexTokenQuest'
-$logPath = Join-Path $stateDirectory 'lifecycle.log'
-
-function Write-LifecycleLog([string]$message) {
-    try {
-        New-Item -ItemType Directory -Path $stateDirectory -Force -ErrorAction Stop | Out-Null
-        Add-Content -LiteralPath $logPath -Value "$(Get-Date -Format o) $message" -ErrorAction Stop
-    }
-    catch {
-        # Lifecycle logging must never prevent the HUD from starting.
-    }
-}
-
-Write-LifecycleLog "Launch requested. WorkingDirectory=$((Get-Location).Path) PluginRoot=$pluginRoot"
-
-$running = Get-Process -Name 'CodexTokenQuest.Desktop' -ErrorAction SilentlyContinue | Select-Object -First 1
-if ($running) {
-    Write-LifecycleLog "HUD already running. Pid=$($running.Id)"
+$state = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CodexTokenQuest'
+New-Item -ItemType Directory -Path $state -Force | Out-Null
+if (!$Worker) {
+    $shell = (Get-Process -Id $PID).Path
+    Start-Process -FilePath $shell -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ('"' + $PSCommandPath + '"'), '-Worker') -WindowStyle Hidden
     exit 0
 }
-
-$needsBuild = !(Test-Path -LiteralPath $assemblyPath)
-if (!$needsBuild) {
-    $assemblyTimestamp = (Get-Item -LiteralPath $assemblyPath).LastWriteTimeUtc
-    $needsBuild = Get-ChildItem -LiteralPath (Join-Path $pluginRoot 'src') -Filter '*.cs' -Recurse |
-        Where-Object { $_.LastWriteTimeUtc -gt $assemblyTimestamp } |
-        Select-Object -First 1
-}
-
-if ($needsBuild) {
-    $buildOutput = & dotnet build $projectPath --configuration Release --nologo --verbosity quiet 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-LifecycleLog "Build failed. ExitCode=$LASTEXITCODE"
-        [Console]::Error.WriteLine(($buildOutput -join [Environment]::NewLine))
-        exit $LASTEXITCODE
+# Protect bootstrap compilation only; desktop launch decisions are shared C#.
+try { $lease = [IO.File]::Open((Join-Path $state 'bootstrap.lock'), 'OpenOrCreate', 'ReadWrite', 'None') }
+catch [IO.IOException] { exit 0 }
+try {
+    $candidates = @()
+    if ($env:DOTNET_ROOT) { $candidates += Join-Path $env:DOTNET_ROOT 'dotnet.exe' }
+    $candidates += Join-Path $env:USERPROFILE '.dotnet\dotnet.exe'
+    $command = Get-Command dotnet -ErrorAction SilentlyContinue
+    if ($command) { $candidates += $command.Source }
+    $sdk = $null
+    foreach ($candidate in $candidates) {
+        if ((Test-Path -LiteralPath $candidate) -and ((& $candidate --list-sdks) -match '^10\.0\.\d+ \[')) { $sdk = $candidate; break }
     }
+    if (!$sdk) { throw '.NET 10 SDK is required. Install it from https://dotnet.microsoft.com/download/dotnet/10.0' }
+    $env:DOTNET_ROOT = Split-Path -Parent $sdk
+    $env:DOTNET_HOST_PATH = $sdk
+    Set-Location -LiteralPath $pluginRoot
+    & $sdk run --project (Join-Path $pluginRoot 'src\CodexTokenQuest.Launcher') --artifacts-path (Join-Path $state 'build\launcher') -c Release -p:UseSharedCompilation=false -- $pluginRoot *>> (Join-Path $state 'bootstrap.log')
+    exit $LASTEXITCODE
 }
-
-$process = Start-Process -FilePath $assemblyPath -WorkingDirectory $pluginRoot -PassThru
-Write-LifecycleLog "HUD started. Pid=$($process.Id) Executable=$assemblyPath"
+catch { Add-Content -LiteralPath (Join-Path $state 'bootstrap.log') -Value "$(Get-Date -Format o) $_"; exit 1 }
+finally { $lease.Dispose() }

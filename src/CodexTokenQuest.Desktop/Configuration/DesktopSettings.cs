@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace CodexTokenQuest.Desktop;
 
@@ -8,6 +9,7 @@ internal sealed record DesktopSettings
     internal const int MinimumRefreshMinutes = 1;
     internal const int MaximumRefreshMinutes = 1440;
     internal const int DefaultHudScalePercent = 100;
+    internal const double DefaultHudScaleFactor = 0.8;
     internal const int MinimumHudScalePercent = 50;
     internal const int MaximumHudScalePercent = 300;
     internal const int DefaultMargin = 16;
@@ -22,6 +24,9 @@ internal sealed record DesktopSettings
 
     public int RefreshMinutes { get; init; } = DefaultRefreshMinutes;
     public int HudScalePercent { get; init; } = DefaultHudScalePercent;
+    public int HudScaleVersion { get; init; } = 1;
+    [JsonIgnore]
+    internal double HudScale => DefaultHudScaleFactor * HudScalePercent / 100d;
     public int Margin { get; init; } = DefaultMargin;
     public long ExperienceBase { get; init; } = DefaultExperienceBase;
     public int OpacityPercent { get; init; } = DefaultOpacityPercent;
@@ -31,7 +36,7 @@ internal sealed record DesktopSettings
     public int ThemeIndex { get; init; }
     public string SelectedPanel { get; init; } = "CAMP";
 
-    private static readonly string SettingsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CodexTokenQuest");
+    private static readonly string SettingsDirectory = AppPaths.StateDirectory;
     private static readonly string SettingsPath = Path.Combine(SettingsDirectory, "settings.json");
 
     internal static DesktopSettings Load()
@@ -40,19 +45,34 @@ internal sealed record DesktopSettings
         {
             if (File.Exists(SettingsPath))
             {
-                var settings = JsonSerializer.Deserialize<DesktopSettings>(File.ReadAllText(SettingsPath));
-                if (settings is not null) return settings.Normalize();
+                return Deserialize(File.ReadAllText(SettingsPath));
             }
         }
         catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
         catch (JsonException) { }
         return new DesktopSettings();
+    }
+
+    internal static DesktopSettings Deserialize(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        var settings = document.RootElement.Deserialize<DesktopSettings>()?.Normalize() ?? new DesktopSettings();
+        // Before version 1, 80% was the size now called 100%. Preserve saved sizes
+        // while expressing them against the new baseline; save the version with them.
+        if (document.RootElement.ValueKind == JsonValueKind.Object
+            && document.RootElement.TryGetProperty(nameof(HudScalePercent), out _)
+            && (!document.RootElement.TryGetProperty(nameof(HudScaleVersion), out _) || settings.HudScaleVersion < 1))
+            settings = settings with { HudScalePercent = (int)Math.Round(settings.HudScalePercent / DefaultHudScaleFactor), HudScaleVersion = 1 };
+        return settings.Normalize();
     }
 
     internal void Save()
     {
         Directory.CreateDirectory(SettingsDirectory);
-        File.WriteAllText(SettingsPath, JsonSerializer.Serialize(Normalize(), new JsonSerializerOptions { WriteIndented = true }));
+        var temporary = SettingsPath + ".tmp";
+        File.WriteAllText(temporary, JsonSerializer.Serialize(Normalize(), new JsonSerializerOptions { WriteIndented = true }));
+        File.Move(temporary, SettingsPath, overwrite: true);
     }
 
     internal DesktopSettings Normalize() => this with
@@ -63,7 +83,7 @@ internal sealed record DesktopSettings
         ExperienceBase = Math.Clamp(ExperienceBase, MinimumExperienceBase, MaximumExperienceBase),
         OpacityPercent = Math.Clamp(OpacityPercent, MinimumOpacityPercent, MaximumOpacityPercent),
         Language = UiText.NormalizeLanguage(Language),
-        CharacterIndex = Math.Clamp(CharacterIndex, 0, RpgHeroPanel.Characters.Count - 1),
+        CharacterIndex = Math.Clamp(CharacterIndex, 0, Characters.All.Length - 1),
         ThemeIndex = Math.Clamp(ThemeIndex, 0, Enum.GetValues<HudTheme>().Length - 1),
         SelectedPanel = SelectedPanel is "CAMP" or "QUESTS" or "HISTORY" ? SelectedPanel : "CAMP"
     };

@@ -1,6 +1,56 @@
 using System.Reflection;
 using System.Text.Json;
 
+if (args.FirstOrDefault() == "--read-live")
+{
+    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+    await using var reader = new CodexTokenQuest.Core.CodexUsageReader();
+    var liveSnapshot = await reader.ReadSnapshotAsync(timeout.Token);
+    Console.WriteLine(JsonSerializer.Serialize(new { liveSnapshot.Tokens?.LifetimeTokens, QuotaWindows = liveSnapshot.RateLimits.Count,
+        DailyBuckets = liveSnapshot.DailyUsage.Count, liveSnapshot.UsageUnsupported, HasWarning = liveSnapshot.Warning is not null }));
+    return 0;
+}
+
+if (args.FirstOrDefault() == "--hold-lease")
+{
+    using var lease = CodexTokenQuest.Core.InstanceLease.TryAcquire(args[1]);
+    Console.WriteLine(lease is null ? "BUSY" : "READY");
+    Console.ReadLine(); return 0;
+}
+if (args.FirstOrDefault()?.StartsWith("--fake-codex") == true)
+{
+    var usageRequests = 0;
+    while (Console.ReadLine() is { } line)
+    {
+        using var message = JsonDocument.Parse(line);
+        var root = message.RootElement;
+        if (!root.TryGetProperty("id", out var id)) continue;
+        var method = root.GetProperty("method").GetString();
+        if (args.Length > 1) File.AppendAllText(args[1], method + "\n");
+        if (method != "initialize" && args[0] == "--fake-codex-auth")
+            Console.WriteLine(JsonSerializer.Serialize(new { id = id.GetInt64(), error = new { code = -32000, message = "authentication required" } }));
+        else if (method == "account/usage/read")
+        {
+            usageRequests++;
+            if (args[0] == "--fake-codex-supported" || (args[0] == "--fake-codex-transient" && usageRequests > 1))
+                Console.WriteLine(JsonSerializer.Serialize(new { id = id.GetInt64(), result = new { summary = new { lifetimeTokens = 1234567 } } }));
+            else
+            {
+                var (code, error) = args[0] switch
+                {
+                    "--fake-codex-legacy" => (-32600, "Invalid request: unknown variant `account/usage/read`, expected one of " + string.Concat(Enumerable.Repeat("`thread/start`, `thread/read`, ", 200))),
+                    "--fake-codex-transient" => (-32600, "Invalid request: usage cache temporarily unavailable"),
+                    _ => (-32601, "Method not found")
+                };
+                Console.WriteLine(JsonSerializer.Serialize(new { id = id.GetInt64(), error = new { code, message = error } }));
+            }
+        }
+        else
+            Console.WriteLine(JsonSerializer.Serialize(new { id = id.GetInt64(), result = new { rateLimits = new { primary = new { usedPercent = 25, windowDurationMins = 300 } } } }));
+    }
+    return 0;
+}
+
 var assembly = Assembly.Load("CodexTokenQuest.Core");
 var parser = assembly.GetType("CodexTokenQuest.Core.UsageSnapshotParser", throwOnError: true)!;
 var parse = parser.GetMethod("Parse", BindingFlags.Public | BindingFlags.Static)!;
@@ -74,6 +124,7 @@ var arguments = new object?[] { tokenEvent, localToday, 0L };
 var parsedLocalTokens = (bool)tryReadIncrement.Invoke(null, arguments)!;
 Assert(parsedLocalTokens && (long)arguments[2]! == 24680L, "Today's local session token increment should be parsed.");
 
+CrossPlatformTests.Run(args.Contains("--render"));
 Console.WriteLine("All Codex Token Quest tests passed.");
 return 0;
 

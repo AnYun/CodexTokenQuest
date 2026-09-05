@@ -12,6 +12,7 @@ internal sealed class CodexAppServerClient : IAsyncDisposable
     private readonly ConcurrentQueue<string> _errors = new();
     private readonly Task _errorPump;
     private long _nextId;
+    private string? _unsupportedUsageWarning;
 
     private CodexAppServerClient(Process process)
     {
@@ -21,21 +22,13 @@ internal sealed class CodexAppServerClient : IAsyncDisposable
         _errorPump = PumpErrorsAsync(process.StandardError);
     }
 
-    public static async Task<CodexAppServerClient> StartAsync(CancellationToken cancellationToken)
+    public static async Task<CodexAppServerClient> StartAsync(CancellationToken cancellationToken, ProcessStartInfo? startInfo = null)
     {
         Process process;
         try
         {
-            process = Process.Start(new ProcessStartInfo
-            {
-                FileName = "codex",
-                Arguments = "app-server --listen stdio://",
-                UseShellExecute = false,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            }) ?? throw new CodexAppServerException("Unable to start codex app-server.");
+            process = Process.Start(startInfo ?? CodexExecutableResolver.CreateStartInfo())
+                ?? throw new CodexAppServerException("Unable to start codex app-server.");
         }
         catch (Exception exception) when (exception is not CodexAppServerException)
         {
@@ -73,17 +66,24 @@ internal sealed class CodexAppServerClient : IAsyncDisposable
         var rateLimits = await SendRequestAsync("account/rateLimits/read", new { }, cancellationToken);
 
         JsonElement? usage = null;
-        string? usageWarning = null;
-        try
+        string? usageWarning = _unsupportedUsageWarning;
+        if (_unsupportedUsageWarning is null)
         {
-            usage = await SendRequestAsync("account/usage/read", new { }, cancellationToken);
-        }
-        catch (CodexAppServerException exception)
-        {
-            usageWarning = exception.Message;
+            try
+            {
+                usage = await SendRequestAsync("account/usage/read", new { }, cancellationToken);
+            }
+            catch (CodexAppServerException exception)
+            {
+                usageWarning = exception.Message;
+                // Capabilities remain fixed for this app-server process. Transient
+                // failures still retry; unsupported methods are probed only once.
+                if (exception.IsUnsupportedMethod) _unsupportedUsageWarning = usageWarning;
+            }
         }
 
-        return UsageSnapshotParser.Parse(rateLimits, usage, usageWarning, DateTimeOffset.UtcNow);
+        return UsageSnapshotParser.Parse(rateLimits, usage, usageWarning, DateTimeOffset.UtcNow)
+            with { UsageUnsupported = _unsupportedUsageWarning is not null };
     }
 
     private async Task<JsonElement> SendRequestAsync(
@@ -131,7 +131,12 @@ internal sealed class CodexAppServerClient : IAsyncDisposable
                             "Codex CLI is not signed in to ChatGPT. Run `codex login` in a terminal, complete sign-in, and try again.");
                     }
 
-                    throw new CodexAppServerException($"{method} failed: {message}");
+                    var code = error.TryGetProperty("code", out var codeNode) && codeNode.TryGetInt32(out var value) ? value : 0;
+                    // Some Codex versions deserialize the method enum before RPC
+                    // dispatch, returning Invalid Request rather than Method Not Found.
+                    var unsupported = code == -32601 || (code == -32600 &&
+                        message?.Contains($"unknown variant `{method}`", StringComparison.Ordinal) == true);
+                    throw new CodexAppServerException($"{method} failed: {message}", unsupported);
                 }
 
                 if (!root.TryGetProperty("result", out var result))
@@ -200,7 +205,9 @@ internal sealed class CodexAppServerClient : IAsyncDisposable
 
 internal sealed class CodexAppServerException : Exception
 {
-    public CodexAppServerException(string message) : base(message) { }
+    public bool IsUnsupportedMethod { get; }
+    public CodexAppServerException(string message, bool isUnsupportedMethod = false) : base(message)
+    { IsUnsupportedMethod = isUnsupportedMethod; }
     public CodexAppServerException(string message, Exception innerException) : base(message, innerException) { }
 }
 
