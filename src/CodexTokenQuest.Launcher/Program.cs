@@ -58,6 +58,7 @@ try
                   <key>CFBundleDisplayName</key><string>Codex Token Quest</string>
                   <key>CFBundlePackageType</key><string>APPL</string>
                   <key>CFBundleVersion</key><string>2.0.0</string>
+                  <key>CFBundleShortVersionString</key><string>2.0.0</string>
                   <key>LSUIElement</key><true/>
                   <key>NSHighResolutionCapable</key><true/>
                   <key>LSEnvironment</key><dict><key>DOTNET_ROOT</key><string>{SecurityElement.Escape(Path.GetDirectoryName(sdk))}</string></dict>
