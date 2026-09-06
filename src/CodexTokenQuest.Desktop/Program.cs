@@ -50,5 +50,7 @@ internal sealed class QuestApp : Application
     private static UsageSnapshot Sample() => new(DateTimeOffset.Now,
         [new("codex", "Codex", "PRIMARY", 32, 300, DateTimeOffset.Now.AddHours(2), null, null),
          new("codex", "Codex", "SECONDARY", 44, 10080, DateTimeOffset.Now.AddDays(3), null, null)],
-        new(12345678, 234567, null, 4, 7), Enumerable.Range(0, 7).Select(i => new DailyTokenUsage(DateOnly.FromDateTime(DateTime.Today).AddDays(i - 6), (i + 1) * 23456)).ToArray(), 2, null);
+        new(12345678, 234567, null, 4, 7), Enumerable.Range(0, 7).Select(i => new DailyTokenUsage(DateOnly.FromDateTime(DateTime.Today).AddDays(i - 6), (i + 1) * 23456)).ToArray(), 2, null)
+        { ResetCredits = [new("sample-one", DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now.AddDays(7), false, "available"),
+            new("sample-two", DateTimeOffset.Now.AddDays(-2), null, true, "available")] };
 }

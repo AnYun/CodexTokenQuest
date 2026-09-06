@@ -71,6 +71,15 @@ internal static class HudCopy
         _ => (L("STATUS", "狀態"), L("LIMITS", "額度"), L("LOGS", "紀錄"))
     };
 
+    internal static string Items => L("ITEMS", "道具");
+    internal static string ResetItem => HudColors.Theme switch
+    {
+        HudTheme.ArcaneGlass => L("MANA POTION", "魔力藥水"),
+        HudTheme.GuildLedger => L("VIGOR SUPPLY", "活力補給"),
+        HudTheme.CodeTerminal => L("RESET MODULE", "重設模組"),
+        _ => L("STAMINA POTION", "體力劑")
+    };
+
     internal static string QuestTitle => HudColors.Theme switch
     {
         HudTheme.PixelDungeon => L("⚔ STAMINA DUNGEON // WEEKLY LIMITS", "⚔ 耐力地城 // 每週額度"),

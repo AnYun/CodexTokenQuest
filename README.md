@@ -5,7 +5,7 @@ English | [正體中文](README.zh-Hant.md)
 A read-only pixel RPG HUD for Codex Desktop. **Windows and macOS share one C# / Avalonia UI and .NET 10 core.** Native window adapters and small bootstrap scripts contain the OS differences; there are no separate product implementations.
 
 - Quota windows, used / remaining percentages, local reset times, countdowns and available reset credits.
-- CAMP, QUESTS, HISTORY and compact view.
+- CAMP, ITEMS, QUESTS, HISTORY and compact view. ITEMS lists available reset credits with grant/expiry times and themed item names; older servers may provide only the count.
 - Levels 1–99; four heroes unlocked at levels 1, 10, 25 and 50.
 - Pixel Dungeon, Arcane Glass, Guild Ledger and Code Terminal themes.
 - English / Traditional Chinese, 50–300% scaling, margins, 20–100% opacity and a 1K–1T experience base.

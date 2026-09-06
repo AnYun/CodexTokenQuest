@@ -10,6 +10,7 @@ internal sealed record UsageSnapshot(
     int? AvailableResetCredits,
     string? Warning)
 {
+    public IReadOnlyList<ResetCredit>? ResetCredits { get; init; }
     public bool UsageUnsupported { get; init; }
 }
 
@@ -35,3 +36,5 @@ internal sealed record TokenSummary(
     int? LongestStreakDays);
 
 internal sealed record DailyTokenUsage(DateOnly Date, long Tokens);
+
+internal sealed record ResetCredit(string Id, DateTimeOffset? GrantedAt, DateTimeOffset? ExpiresAt, bool NeverExpires, string Status);

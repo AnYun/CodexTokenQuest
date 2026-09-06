@@ -18,6 +18,30 @@ internal static class CrossPlatformTests
         Check(!WindowsDesktopAdapter.IsMainWindow(new(0, 0, 1000, 800), 2.5, "Chrome_WidgetWin_1", 0, 0), "High-DPI popup is not mistaken for a main host");
         foreach (var (name, style, owner) in new[] { ("#32768", 0L, (nint)0), ("tooltips_class32", 0L, (nint)0), ("Chrome_WidgetWin_1", 0x80L, (nint)0), ("Chrome_WidgetWin_1", 0L, (nint)123) })
             Check(!WindowsDesktopAdapter.IsMainWindow(new(0, 0, 2000, 1500), 1, name, style, owner), "Large menus, tool windows and owned popups are excluded");
+        using (var data = JsonDocument.Parse("""
+            {"rateLimitResetCredits":{"availableCount":5,"credits":[
+              {"id":"one","grantedAt":1788134400,"expiresAt":1788739200,"status":"available"},
+              {"id":"two","grantedAt":1788134400,"expiresAt":null,"status":"available"},
+              {"id":"bad","grantedAt":9223372036854775807,"expiresAt":"invalid"}]}}
+            """))
+        {
+            var parsed = UsageSnapshotParser.Parse(data.RootElement, null, null, DateTimeOffset.UtcNow);
+            Check(parsed.AvailableResetCredits == 5 && parsed.ResetCredits?.Count == 3, "Count is independent of capped credit details");
+            Check(parsed.ResetCredits![0].GrantedAt == DateTimeOffset.FromUnixTimeSeconds(1788134400)
+                && parsed.ResetCredits[0].ExpiresAt == DateTimeOffset.FromUnixTimeSeconds(1788739200), "Credit grant and expiry timestamps parsed");
+            Check(parsed.ResetCredits[1].NeverExpires && parsed.ResetCredits[2].GrantedAt is null
+                && !parsed.ResetCredits[2].NeverExpires, "No expiry is distinct from malformed or missing timestamps");
+        }
+        foreach (var (json, count) in new[] { ("{}", (int?)null), ("{\"rateLimitResetCredits\":{\"availableCount\":0}}", (int?)0) })
+        {
+            using var data = JsonDocument.Parse(json);
+            var parsed = UsageSnapshotParser.Parse(data.RootElement, null, null, DateTimeOffset.UtcNow);
+            Check(parsed.AvailableResetCredits == count && parsed.ResetCredits is null, "Missing credit details preserve unknown versus zero count");
+        }
+        using (var data = JsonDocument.Parse("""{"rateLimitResetCredits":{"availableCount":0,"credits":[]}}"""))
+            Check(UsageSnapshotParser.Parse(data.RootElement, null, null, DateTimeOffset.UtcNow).ResetCredits is { Count: 0 },
+                "Fetched empty details remain distinct from unavailable details");
+        Check(DesktopSettings.Deserialize("""{"SelectedPanel":"ITEMS","HudScaleVersion":1}""").SelectedPanel == "ITEMS", "Items selection survives settings normalization");
         var now = DateTimeOffset.UtcNow;
         var lifecycle = new HostLifecycle();
         var visible = new HostState(true, true, true, new(100, 200, 1000, 800));
@@ -254,7 +278,7 @@ internal static class CrossPlatformTests
         var folder = Path.GetFullPath("artifacts/qa"); if (render) Directory.CreateDirectory(folder);
         foreach (var language in new[] { "en", "zh-Hant" })
         foreach (var theme in Enumerable.Range(0, 4))
-        foreach (var panel in new[] { "CAMP", "QUESTS", "HISTORY", "COMPACT" })
+        foreach (var panel in new[] { "CAMP", "ITEMS", "QUESTS", "HISTORY", "COMPACT" })
         foreach (var state in new[] { "ready", "unsupported", "partial", "failed" })
         {
             var fake = new FakePlatform();
@@ -262,7 +286,9 @@ internal static class CrossPlatformTests
             var model = new UsageViewModel(_ => state == "failed" ? Task.FromException<UsageSnapshot>(new IOException(diagnostic)) : Task.FromResult(new UsageSnapshot(DateTimeOffset.Now,
                 [new("codex", "Codex", "SECONDARY", 42, 10080, DateTimeOffset.Now.AddDays(2), null, null)],
                 state == "ready" ? new(12345678, null, null, null, null) : null, [], 2,
-                state == "ready" ? null : diagnostic) { UsageUnsupported = state == "unsupported" }), _ => 12345);
+                state == "ready" ? null : diagnostic) { UsageUnsupported = state == "unsupported", ResetCredits = state == "ready"
+                    ? [new("one", DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now.AddDays(7), false, "available"),
+                       new("two", DateTimeOffset.Now.AddDays(-2), null, true, "available")] : state == "partial" ? [] : null }), _ => 12345);
             var window = new UsageWindow(new(fake, fake), model, true, new DesktopSettings { Language = language, ThemeIndex = theme,
                 SelectedPanel = panel == "COMPACT" ? "CAMP" : panel, MinimizedMode = panel == "COMPACT" });
             window.Show();
@@ -282,6 +308,24 @@ internal static class CrossPlatformTests
                 var noticeBottom = notice.TranslatePoint(new Point(0, notice.Bounds.Height), window)!.Value.Y;
                 var footerTop = footer.TranslatePoint(default, window)!.Value.Y;
                 Check(noticeBottom <= footerTop, $"{panel}/{state}: notice cannot overlap footer");
+            }
+            if (panel == "ITEMS" && state == "ready")
+            {
+                var texts = window.GetVisualDescendants().OfType<TextBlock>().ToArray();
+                Check(window.GetVisualDescendants().OfType<ResetItemIcon>().Count() == 2, "Each reset item has a themed icon");
+                foreach (var start in texts.Where(t => t.Name == "ItemStart"))
+                {
+                    var end = ((Grid)start.Parent!).Children.OfType<TextBlock>().Single(t => t.Name == "ItemEnd");
+                    var times = (Grid)start.Parent!;
+                    var heading = (Grid)times.Parent!;
+                    var name = heading.Children.OfType<TextBlock>().Single(t => t.Name == "ItemName");
+                    Check(start.Bounds.Bottom <= end.Bounds.Y && Math.Abs(start.Bounds.X - end.Bounds.X) < 0.5
+                        && name.Bounds.Right <= times.Bounds.X,
+                        "Start and end times form two rows to the right of the item name");
+                }
+                Check(texts.Any(t => t.Text == $"{HudCopy.ResetItem} × 2"), "Item count rendered from summary");
+                Check(texts.Any(t => t.Text?.Contains(UiText.Pick("No expiry", "無期限")) == true), "No-expiry credit rendered");
+                Check(texts.All(t => t.TextLayout.TextLines.All(line => !line.HasCollapsed)), $"{language}/{theme}: item labels fit");
             }
             if (panel == "CAMP")
             {
@@ -331,7 +375,7 @@ internal static class CrossPlatformTests
             Check(saved?.RefreshMinutes == 23 && saved.Language == language, "Styled settings save edited values and language");
         }
         Console.WriteLine("Validated 8 themed settings views, live theme changes and saving.");
-        Console.WriteLine($"Validated 128 HUD theme/language/panel/status combinations{(render ? $"; rendered to {folder}" : "")}");
+        Console.WriteLine($"Validated 160 HUD theme/language/panel/status combinations{(render ? $"; rendered to {folder}" : "")}");
     }
     private sealed class FakePlatform : IHostWindowTracker, IHudWindowIntegration
     {

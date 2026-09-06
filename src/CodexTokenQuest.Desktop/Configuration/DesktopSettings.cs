@@ -85,6 +85,6 @@ internal sealed record DesktopSettings
         Language = UiText.NormalizeLanguage(Language),
         CharacterIndex = Math.Clamp(CharacterIndex, 0, Characters.All.Length - 1),
         ThemeIndex = Math.Clamp(ThemeIndex, 0, Enum.GetValues<HudTheme>().Length - 1),
-        SelectedPanel = SelectedPanel is "CAMP" or "QUESTS" or "HISTORY" ? SelectedPanel : "CAMP"
+        SelectedPanel = SelectedPanel is "CAMP" or "ITEMS" or "QUESTS" or "HISTORY" ? SelectedPanel : "CAMP"
     };
 }

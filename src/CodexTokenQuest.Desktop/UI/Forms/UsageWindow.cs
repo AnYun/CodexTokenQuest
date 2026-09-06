@@ -30,7 +30,7 @@ internal sealed class UsageWindow : Window
     private ProgressBar? _stamina, _experience;
     private TextBlock? _staminaText, _experienceText;
     private Button _refreshButton = null!;
-    private StackPanel? _quotas;
+    private StackPanel? _quotas, _items;
     private readonly List<(TextBlock Label, DateTimeOffset? At)> _quotaResets = [];
     private UsageSnapshot? _rendered;
     private DateTimeOffset? _reportedFetch;
@@ -91,7 +91,7 @@ internal sealed class UsageWindow : Window
     }
     private void Build()
     {
-        _hero?.Dispose(); _hero = null; _chart = null; _quotas = null; _stamina = null; _experience = null;
+        _hero?.Dispose(); _hero = null; _chart = null; _quotas = null; _items = null; _stamina = null; _experience = null;
         _heroName = _heroClass = null;
         _staminaText = _experienceText = null; _quotaResets.Clear(); _rendered = null;
         UiText.SetLanguage(_settings.Language); HudColors.SetTheme((HudTheme)_settings.ThemeIndex);
@@ -113,9 +113,9 @@ internal sealed class UsageWindow : Window
         var bodyRow = compact ? 1 : 2;
         if (!compact)
         {
-            var tabs = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*"), Margin = new Thickness(0, 2, 0, 3) };
-            var labels = HudCopy.Tabs; var names = new[] { "CAMP", "QUESTS", "HISTORY" }; var display = new[] { labels.Camp, labels.Quests, labels.History };
-            for (var i = 0; i < 3; i++) { var name = names[i]; Cell(tabs, Button(display[i], () => SelectPanel(name), _settings.SelectedPanel == name ? HudColors.Gold : HudColors.Muted), 0, i); }
+            var tabs = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*,*"), Margin = new Thickness(0, 2, 0, 3) };
+            var labels = HudCopy.Tabs; var names = new[] { "CAMP", "ITEMS", "QUESTS", "HISTORY" }; var display = new[] { labels.Camp, HudCopy.Items, labels.Quests, labels.History };
+            for (var i = 0; i < 4; i++) { var name = names[i]; Cell(tabs, Button(display[i], () => SelectPanel(name), _settings.SelectedPanel == name ? HudColors.Gold : HudColors.Muted), 0, i); }
             Cell(root, tabs, 1);
         }
         _reset = Label("", 10, HudColors.Cyan); _reset.Name = "NextReset"; _reset.Margin = new Thickness(6, 3);
@@ -149,6 +149,11 @@ internal sealed class UsageWindow : Window
             var today = new StackPanel { Spacing = 2 }; today.Children.Add(Label(HudCopy.Today, 9, HudColors.Muted));
             _today = Label("", 15, HudColors.Gold); _today.Name = "TodayTokens"; today.Children.Add(_today); Cell(stats, today, 8);
             Cell(camp, Frame(stats), 0, 2); Cell(body, camp, 0);
+        }
+        else if (_settings.SelectedPanel == "ITEMS")
+        {
+            _items = new StackPanel { Spacing = 6 };
+            Cell(body, new ScrollViewer { Content = _items, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled }, 0);
         }
         else if (_settings.SelectedPanel == "QUESTS")
         {
@@ -208,13 +213,46 @@ internal sealed class UsageWindow : Window
             _total.Text = PixelArt.Number(_model.LifetimeTokens); _today.Text = $"+{PixelArt.Number(_model.TodayTokens)}";
         }
         if (_chart is not null) { _chart.Data = _model.History; _chart.InvalidateVisual(); }
+        if (_items is not null && (_rendered != _model.Snapshot || _items.Children.Count == 0))
+        {
+            _rendered = _model.Snapshot; _items.Children.Clear();
+            var snapshot = _model.Snapshot;
+            _items.Children.Add(Label($"{HudCopy.ResetItem} × {snapshot?.AvailableResetCredits?.ToString() ?? "--"}", 16, HudColors.Gold));
+            _items.Children.Add(Label(UiText.Pick("AVAILABLE RESETS", "可用重設次數"), 10, HudColors.Muted));
+            var details = snapshot?.ResetCredits;
+            if (details is null)
+                _items.Children.Add(Label(UiText.Pick("Credit details unavailable", "尚未提供道具時間明細"), 11, HudColors.Muted));
+            else
+            {
+                var index = 0;
+                foreach (var credit in details)
+                {
+                    var stack = new StackPanel { Margin = new Thickness(10), Spacing = 5 };
+                    var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("40,*,154") };
+                    Cell(heading, new ResetItemIcon { Width = 32, Height = 32 }, 0);
+                    var name = Label($"{++index:00} · {HudCopy.ResetItem}", 12, HudColors.Gold);
+                    name.Name = "ItemName"; name.Margin = new Thickness(0, 0, 6, 0);
+                    Cell(heading, name, 0, 1);
+                    stack.Children.Add(heading);
+                    var times = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto"), VerticalAlignment = VerticalAlignment.Center };
+                    var start = Label(UiText.Pick("START ", "起始 ") + ItemTime(credit.GrantedAt), 10);
+                    var end = Label(UiText.Pick("END ", "結束 ") + (credit.NeverExpires ? UiText.Pick("No expiry", "無期限") : ItemTime(credit.ExpiresAt)), 10, HudColors.Cyan);
+                    start.Name = "ItemStart"; end.Name = "ItemEnd";
+                    Cell(times, start, 0); Cell(times, end, 1); Cell(heading, times, 0, 2);
+                    _items.Children.Add(Frame(stack));
+                }
+                if (details.Count == 0)
+                    _items.Children.Add(Label(UiText.Pick("No available item details", "目前沒有可用道具明細"), 11, HudColors.Muted));
+                if (snapshot!.AvailableResetCredits > details.Count)
+                    _items.Children.Add(Label(UiText.Pick("Only some credit details are provided", "目前僅提供部分道具明細"), 10, HudColors.Muted));
+            }
+        }
         if (_quotas is not null && _rendered != _model.Snapshot)
         {
             _rendered = _model.Snapshot; _quotas.Children.Clear(); _quotaResets.Clear();
             _quotas.Children.Add(Label(HudCopy.QuestTitle, 10, HudColors.Gold));
             if (_model.Snapshot is { } snapshot)
             {
-                _quotas.Children.Add(Label(UiText.Pick("Available resets: ", "可用重設次數：") + (snapshot.AvailableResetCredits?.ToString() ?? "--")));
                 foreach (var bucket in snapshot.RateLimits.OrderBy(x => x.Id.Equals("codex", StringComparison.OrdinalIgnoreCase) ? 0 : 1).ThenByDescending(x => x.WindowDurationMinutes))
                 {
                     var stack = new StackPanel { Margin = new Thickness(10), Spacing = 5 };
@@ -233,6 +271,7 @@ internal sealed class UsageWindow : Window
         }
         _tray.ToolTipText = _model.Error is null ? $"{UiText.WindowTitle} · {UiText.Level}{_model.Level(_settings.ExperienceBase)}" : UiText.TrayReadFailed;
     }
+    private static string ItemTime(DateTimeOffset? time) => time?.ToLocalTime().ToString("yyyy/MM/dd HH:mm") ?? "--";
     private Color ResetColor(DateTimeOffset? reset) => reset is null ? HudColors.Muted
         : reset.Value - _model.Now <= TimeSpan.FromHours(12) ? HudColors.Amber : HudColors.Cyan;
     private void SaveSettings() { if (!_preview) _settings.Save(); }
@@ -251,7 +290,7 @@ internal sealed class UsageWindow : Window
         var menu = _tray.Menu ?? new NativeMenu();
         menu.Items.Clear();
         void Add(string name, Action action) { var item = new NativeMenuItem(name); item.Click += (_, _) => action(); menu.Items.Add(item); }
-        Add(UiText.TrayToggle, ToggleVisibility); Add(UiText.TrayCamp, () => SelectPanel("CAMP")); Add(UiText.TrayQuests, () => SelectPanel("QUESTS")); Add(UiText.TrayHistory, () => SelectPanel("HISTORY"));
+        Add(UiText.TrayToggle, ToggleVisibility); Add(UiText.TrayCamp, () => SelectPanel("CAMP")); Add(HudCopy.Items, () => SelectPanel("ITEMS")); Add(UiText.TrayQuests, () => SelectPanel("QUESTS")); Add(UiText.TrayHistory, () => SelectPanel("HISTORY"));
         Add(UiText.TrayTheme, CycleTheme); Add(UiText.TrayRefresh, () => _ = _model.RefreshAsync()); Add(UiText.TrayOptions, ShowSettings);
         if (OperatingSystem.IsMacOS()) Add(UiText.Pick("Accessibility permission…", "輔助使用權限…"), ShowPermission);
         menu.Items.Add(new NativeMenuItemSeparator()); Add(UiText.TrayExit, () => _ = ExitAsync());

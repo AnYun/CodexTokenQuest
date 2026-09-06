@@ -32,6 +32,19 @@ internal static class UsageSnapshotParser
             ? ReadInt32(credits, "availableCount")
             : null;
 
+        List<ResetCredit>? details = null;
+        if (credits.ValueKind == JsonValueKind.Object && credits.TryGetProperty("credits", out var rows) && rows.ValueKind == JsonValueKind.Array)
+        {
+            details = [];
+            foreach (var row in rows.EnumerateArray())
+            {
+                if (row.ValueKind != JsonValueKind.Object || ReadString(row, "id") is not { } id) continue;
+                details.Add(new(id, ReadTimestamp(row, "grantedAt"), ReadTimestamp(row, "expiresAt"),
+                    row.TryGetProperty("expiresAt", out var expires) && expires.ValueKind == JsonValueKind.Null,
+                    ReadString(row, "status") ?? "unknown"));
+            }
+        }
+
         TokenSummary? tokenSummary = null;
         var dailyUsage = new List<DailyTokenUsage>();
         if (usageResult is { } usage)
@@ -60,7 +73,15 @@ internal static class UsageSnapshotParser
             }
         }
 
-        return new UsageSnapshot(fetchedAt, buckets, tokenSummary, dailyUsage, resetCredits, warning);
+        return new UsageSnapshot(fetchedAt, buckets, tokenSummary, dailyUsage, resetCredits, warning) { ResetCredits = details };
+    }
+
+    private static DateTimeOffset? ReadTimestamp(JsonElement element, string name)
+    {
+        var seconds = ReadInt64(element, name);
+        if (seconds is null) return null;
+        try { return DateTimeOffset.FromUnixTimeSeconds(seconds.Value); }
+        catch (ArgumentOutOfRangeException) { return null; }
     }
 
     private static void AddWindows(
